@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<head>
+  <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+  <title>Rubyは最高</title>
+  <link rel="stylesheet" href="/assets/css/style.css" type="text/css">
+  <link rel="stylesheet" href="/assets/css/syntax.css" type="text/css">
+  <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+</head>
+<body>
+  <header>
+  <div>06 Mar 2014</div>
+  <h1>Rubyは最高</h1>
+</header>
+
+<div class='main'>
+  <h2 id="ruby">Rubyとは</h2>
+
+<p>Rubyは、手軽なオブジェクト指向プログラミングを実現するための種々の機能を持つオブジェクト指向スクリプト言語です。</p>
+
+<h2 id="try_ruby">Try Ruby</h2>
+<script src='https://gist.github.com/5598133.js?file=creature.rb'> </script><div class='highlight'><pre><code class='ruby'><span class='lineno'> 1</span> <span class='k'>class</span> <span class='nc'>Person</span>
+<span class='lineno'> 2</span>   <span class='k'>def</span> <span class='nf'>initialize</span><span class='p'>(</span><span class='nb'>name</span><span class='p'>)</span>
+<span class='lineno'> 3</span>     <span class='vi'>@name</span> <span class='o'>=</span> <span class='nb'>name</span>
+<span class='lineno'> 4</span>   <span class='k'>end</span>
+<span class='lineno'> 5</span> 
+<span class='lineno'> 6</span>   <span class='k'>def</span> <span class='nf'>hello</span>
+<span class='lineno'> 7</span>     <span class='s2'>&quot;Hello, friend!</span><span class='se'>\n</span><span class='s2'>My name is </span><span class='si'>#{</span><span class='vi'>@name</span><span class='si'>}</span><span class='s2'>!&quot;</span>
+<span class='lineno'> 8</span>   <span class='k'>end</span>
+<span class='lineno'> 9</span> <span class='k'>end</span>
+<span class='lineno'>10</span> 
+<span class='lineno'>11</span> <span class='n'>charlie</span> <span class='o'>=</span> <span class='no'>Person</span><span class='o'>.</span><span class='n'>new</span><span class='p'>(</span><span class='s1'>&#39;Charlie&#39;</span><span class='p'>)</span>
+<span class='lineno'>12</span> <span class='nb'>puts</span> <span class='n'>charlie</span><span class='o'>.</span><span class='n'>hello</span>
+<span class='lineno'>13</span> 
+<span class='lineno'>14</span> <span class='c1'># &gt;&gt; Hello, friend!</span>
+<span class='lineno'>15</span> <span class='c1'># &gt;&gt; My name is Charlie!</span>
+</code></pre></div>
+<p>{“layout”=&gt;”post”, “title”=&gt;”Rubyは最高”, “tags”=&gt;[ruby, language], “excerpt”=&gt;”A dynamic, open source programming language with a focus on simplicity and productivity.”, “url”=&gt;”/2014-03-06/Tomorrow-is-always-a-good-day”, “date”=&gt;2014-03-06 00:00:00 +0900, “id”=&gt;”/2014-03-06/Tomorrow-is-always-a-good-day”, “categories”=&gt;[], “next”=&gt;nil, “previous”=&gt;<a href="Post: /2014-03-06/Contours">Post: /2014-03-06/Contours</a>, “path”=&gt;”_posts/2014-03-06-Tomorrow-is-always-a-good-day.md”, “content”=&gt;”##Rubyとは\nRubyは、手軽なオブジェクト指向プログラミングを実現するための種々の機能を持つオブジェクト指向スクリプト言語です。\n\n##Try Ruby\n\n{% gist 5598133 creature.rb %} \n\n{% highlight ruby linenos %}\nclass Person\n def initialize(name)\n @name = name\n end\n\n def hello\n &quot;Hello, friend!\nMy name is #{@name}!&quot;\n end\nend\n\ncharlie = Person.new(‘Charlie’)\nputs charlie.hello\n\n# » Hello, friend!\n# » My name is Charlie!\n{% endhighlight %}\n\n\n{{ page }}\n”}</p>
+</div>
+
+<footer>
+  <p>
+<a rel="license" href="http://creativecommons.org/licenses/by/4.0/"><img alt="クリエイティブ・コモンズ・ライセンス" style="border-width:0" src="http://i.creativecommons.org/l/by/4.0/80x15.png" /></a><a rel="license" href="http://creativecommons.org/licenses/by/4.0/">クリエイティブ・コモンズ 表示 4.0 国際 ライセンス</a>  skkmania 2014 
+          with help from <a href="http://jekyllbootstrap.com" target="_blank" title="The Definitive Jekyll Blogging Framework">Jekyll Bootstrap</a>
+  </p>
+</footer>
+
+  <p>- rendered with layout template -</p>
+</body>
