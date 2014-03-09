@@ -35,6 +35,20 @@ def get_centroids(contours, height, width, box_min=16, box_max=48):
       centroids.append((x+w/2, y+h/2))
   return centroids
 
+def write_contour(img, contour):
+  out_img = np.zeros(img.shape,np.uint8)
+  for point in contour:
+    cv2.circle(out_img, (point[0][0],point[0][1]), 1, [0,0,255])
+  return out_img
+
+def write_contours_bounding_rect(img):
+  out_img = img
+  for cnt in contours:
+    x,y,w,h = cv2.boundingRect(cnt)
+    cv2.rectangle(om, (x, y), (x+w, y+h), [0,255,0])
+    if (int(w) in range(60,120)) or (int(h) in range(60,120)):
+      centroids.append((x+w/2, y+h/2))
+      cv2.circle(out_img, (int(x+w/2), int(y+h/2)), 5, [0,255,0])
 
 infilename = sys.argv[1]
 
@@ -43,6 +57,12 @@ img = cv2.imread(infilename)
 
 # get centroids
 contours, height, width = get_contours(img)
+
+outim = write_contour(img,contours[76])
+cv2.imwrite('images/cont76.jpg', outim)
+outim = write_contour(img,contours[126])
+cv2.imwrite('images/cont126.jpg', outim)
+
 centroids = get_centroids(contours, height, width)
 
 # print centroids

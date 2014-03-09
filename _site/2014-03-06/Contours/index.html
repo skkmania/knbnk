@@ -15,11 +15,43 @@
 <div class='main'>
   <h2 id="contours">Contoursとは</h2>
 
-<p><a href="http://docs.opencv.org/trunk/modules/imgproc/doc/structural_analysis_and_shape_descriptors.html?highlight=contour#cv2.findContours">opencvのfindContours</a>により得られるデータ。 画像内の曲線を一連の点で表現している。 pythonでは数値の配列(点)の配列の配列(点の集合)がひとつのcontourとなり、その配列がfindContoursの戻り値である。</p>
+<p><a href="http://docs.opencv.org/trunk/modules/imgproc/doc/structural_analysis_and_shape_descriptors.html?highlight=contour#cv2.findContours">opencvのfindContours</a>により得られるデータ。この関数は与えられた画像のなかである形を検出すると、その輪郭となる曲線を一連の点で表現して返す。 例は <a href="https://www.google.co.jp/search?q=opencv+contour+sample+image&client=firefox-aurora&hs=3OS&rls=org.mozilla:ja-JP-mac:unofficial&hl=ja&channel=fflb&tbm=isch&tbo=u&source=univ&sa=X&ei=ogUYU4_iM4yNkwWl5IHwDw&ved=0CCcQsAQ&biw=1280&bih=925">netで検索すれば</a>大量にみつかる。</p>
+
+<p>この関数を近デジの書籍のページ画像に適用して、文字の切り出しに活用してみよう、というのがこのページの趣旨である。</p>
+
+<h2 id="pythoncontour">pythonとcontour</h2>
+
+<p>contourは一連の点であるが、pythonでは数値の配列の配列の配列がひとつのcontourとなり、その配列がfindContoursの戻り値である。 ややこしいのでもうすこし説明を加える。</p>
+
+<ul>
+<li>数値の配列
+<ul>
+<li>とは、いまは対象が2次元画像なので座標は2つ、つまり [x, y] という配列がひとつの点を表す。</li>
+</ul>
+</li>
+
+<li>その配列
+<ul>
+<li>といっても、[[x,y]] と要素がひとつだけで、点を括弧でくくっただけ(意味がいまいちよくわからない)</li>
+</ul>
+</li>
+
+<li>その配列
+<ul>
+<li>たとえば [[[438, 524]], [[439, 525]],[[439, 528]] ] は点の集合をあらわす。これがひとつのcontourである。</li>
+</ul>
+</li>
+
+<li>その配列
+<ul>
+<li>findContoursは画像から検出したすべてのcontourをひとつの配列として戻り値を構成するのである。</li>
+</ul>
+</li>
+</ul>
 
 <h2 id="sample_image">Sample Image</h2>
 
-<p><img src="/images/twletters.jpg" alt="twletters.jpg" /> これは近デジから取得したある画像の断片である。 この例を使い、実際に求められたデータとその位置の対応をメモしておく。</p>
+<p>これは近デジから取得した画像の断片である。 <img src="/images/twletters.jpg" alt="twletters.jpg" /> この例を使い、実際にcontourを求めその活用法を述べる。</p>
 
 <h2 id="code">Code</h2>
 
@@ -33,7 +65,11 @@
 </code></pre></div>
 <p>のようになる。</p>
 
-<p>imread で読みこんだ画像データを、findContours関数にわたせばその戻り値として配列が得られる。 この画像は縦横が 558 pixel x 669 pixel、の小さなものだが、 次に示すようにこの画像から検出したcontours配列の長さ(contourの数)は217、それぞれのcontourが含む点の数も次のようなものとなる。</p>
+<p>imread で読みこんだ画像データを、findContours関数にわたせばその戻り値として配列が得られる。</p>
+
+<p>この画像は縦横が 558 pixel x 669 pixel、の小さなものだが、</p>
+
+<p>次に示すようにこの画像から検出したcontours配列の長さ(contourの数)は217、それぞれのcontourが含む点の数も次のようなものとなる。</p>
 <div class='highlight'><pre><code class='python'><span class='p'>(</span><span class='n'>Pdb</span><span class='p'>)</span> <span class='nb'>len</span><span class='p'>(</span><span class='n'>contours</span><span class='p'>)</span>
 <span class='mi'>217</span>
 <span class='p'>(</span><span class='n'>Pdb</span><span class='p'>)</span> <span class='p'>[</span><span class='nb'>len</span><span class='p'>(</span><span class='n'>x</span><span class='p'>)</span> <span class='k'>for</span> <span class='n'>x</span> <span class='ow'>in</span> <span class='n'>contours</span><span class='p'>]</span>
@@ -61,7 +97,9 @@
 </code></pre></div>
 <p>となっている。単に点の配列でなく、各点をいったん配列でくくったものの配列となっていることに注意。</p>
 
-<p>このcontourを元の画像に重ねて色をつけて表示してみたのが次の図となる。 各点を2pixelの赤い円で表現している。 <img src="/images/a_contour.jpg" alt="a_contour.jpg" /></p>
+<p>このcontourを元の画像に重ねて色をつけて表示してみたのが次の図となる。 各点を1pixelの赤い円で表現している。</p>
+
+<p><img src="/images/a_contour.jpg" alt="a_contour.jpg" /></p>
 
 <p>ちなみに全てのcontourを同様に色をつけると <img src="/images/all_contours.jpg" alt="all_contours.jpg" /> となる。</p>
 
