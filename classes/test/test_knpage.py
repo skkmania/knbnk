@@ -128,7 +128,7 @@ class TestKnPage(unittest.TestCase):
       kn = KnPage(fname)
       kn.write_original_with_contour_and_rect_file(self.DATA_DIR)
 
-  def test_write_all_with_params(self):
+  def test_write_with_params(self):
       fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
       params = self.DATA_DIR + '/twletters_01.json'
       kn = KnPage(fname, params)

@@ -208,6 +208,7 @@ class KnPage:
       self.write_contours_bounding_rect_to_file(outdir)
       self.write_original_with_contour_file(outdir)
       self.write_original_with_contour_and_rect_file(outdir)
+      self.write_collected_boxes_to_file(outdir)
       self.write_original_with_collected_boxes_to_file(outdir)
 
   def include(self, box1, box2):
@@ -324,7 +325,7 @@ class KnPage:
     self.boxes = [x for x in self.boxes if (x[2] < 200) and (x[3] < 200)]
 
     self.collected_boxes = []
-    temp_boxes = []
+    adjs = []
 
     f = open('self_boxes.txt', 'w')
     f.write("self.boxes\n")
@@ -338,20 +339,17 @@ class KnPage:
       f.write('len of self.boxes : ' + str(len(self.boxes))+"\n")
       abox = self.boxes.pop()
       f.write('abox : ' + str(abox)+"\n")
-      f.write('temp_boxes : ' + str(temp_boxes)+"\n")
       #temp_boxes = [x for x in self.boxes if self.intersect(abox, x)]  
       adjs = self.get_adj_boxes(self.boxes, abox)
       f.write('adjs : ' + str(adjs)+"\n")
-      temp_boxes = adjs
-      #temp_boxes += adjs
-      for x in temp_boxes:
+      for x in adjs:
           if x in self.boxes:  self.boxes.remove(x)
       f.write('len of self.boxes after remove : ' + str(len(self.boxes))+"\n")
       f.write('self.boxes after remove: ' + str(self.boxes)+"\n")
-      temp_boxes.append(abox)
-      f.write('temp_boxes after append: ' + str(temp_boxes)+"\n")
-      if len(temp_boxes) > 0:
-        boundingBox = self.get_boundingBox(temp_boxes)
+      adjs.append(abox)
+      f.write('adjs after append: ' + str(adjs)+"\n")
+      if len(adjs) > 0:
+        boundingBox = self.get_boundingBox(adjs)
         f.write('boundingBox : ' + str(boundingBox)+"\n")
         self.collected_boxes.append(boundingBox)
         f.write('self.collected_boxes : ' + str(self.collected_boxes)+"\n")
