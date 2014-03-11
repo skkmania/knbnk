@@ -145,6 +145,20 @@ class TestKnPage(unittest.TestCase):
         kn = KnPage(fname, params)
         kn.write_all(self.DATA_DIR)
 
+  def test_include(self):
+      box1 = (20, 30, 10, 10)
+      box2 = (25, 35, 15, 15)
+      box3 = (35, 45, 10, 10)
+      box4 = (35, 20, 20, 20)
+      box5 = (10, 45, 20, 20)
+      box6 = (27, 37, 10, 10)
+      fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
+      kn = KnPage(fname)
+      assert not kn.include(box1, box2)
+      assert not kn.include(box1, box3)
+      assert not kn.include(box1, box4)
+      assert kn.include(box2, box6)
+
   def test_intersect(self):
       box1 = (20, 30, 10, 10)
       box2 = (25, 35, 15, 15)
@@ -177,7 +191,51 @@ class TestKnPage(unittest.TestCase):
       outer_box = kn.get_boundingBox([box1, box2,box3,box4,box5])
       assert outer_box == (10,20,45,45)
 
+  def test_sweep_included_boxes(self):
+      box1 = (20, 30, 10, 10)
+      box2 = (25, 35, 15, 15)
+      box3 = (35, 45, 10, 10)
+      box4 = (35, 20, 20, 20)
+      box5 = (10, 45, 20, 20)
+      box6 = (27, 37, 10, 10)
+      fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
+      kn = KnPage(fname)
+      result = kn.sweep_included_boxes([box1, box2, box3, box4, box5, box6])
+      assert len(result) == 5
+
+  def test_get_adj_boxes(self):
+      box01 = (20, 30, 10, 10)
+      box02 = (25, 35, 15, 15)
+      box03 = (35, 45, 10, 10)
+      box04 = (35, 20, 20, 20)
+      box05 = (10, 45, 20, 20)
+      box06 = (27, 37, 10, 10)
+      box11 = (120, 30, 10, 10)
+      box12 = (125, 35, 15, 15)
+      box13 = (135, 45, 10, 10)
+      box14 = (135, 20, 20, 20)
+      box15 = (110, 45, 20, 20)
+      box16 = (127, 37, 10, 10)
+      boxes = [box01,box02,box03,box04,box05,box06, box11,box12,box13,box14,box15,box16]
+      fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
+      kn = KnPage(fname)
+      result = kn.get_adj_boxes(boxes, box01)
+      assert list( set(result) - set([box01,box02,box03,box04,box05,box06]) )  == []
+
+  def test_sweep_included_boxes_2(self):
+      fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
+      kn = KnPage(fname)
+      kn.sweep_included_boxes()
+      kn.write_boxes_to_file(self.DATA_DIR)
+
   def test_write_original_with_contour_and_rect_file(self):
       fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
       kn = KnPage(fname)
+      kn.write_original_with_collected_boxes_to_file(self.DATA_DIR)
+
+  def test_collect_boxes(self):
+      fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
+      kn = KnPage(fname)
+      kn.collect_boxes()
+      kn.write_collected_boxes_to_file(self.DATA_DIR)
       kn.write_original_with_collected_boxes_to_file(self.DATA_DIR)

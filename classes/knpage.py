@@ -147,6 +147,13 @@ class KnPage:
         cv2.circle(om, (int(x+w/2), int(y+h/2)), 5, [0,255,0])
     self.write(self.mkFilename('_cont_rect', outdir), om)
 
+  def write_boxes_to_file(self, outdir):
+    om = np.zeros(self.img.shape,np.uint8)
+    for box in self.boxes:
+      x,y,w,h = box
+      cv2.rectangle(om, (x, y), (x+w, y+h), [0,255,0])
+    self.write(self.mkFilename('_boxes', outdir), om)
+      
   def write_data_file(self, outdir):
     if not hasattr(self, 'contours'):
       self.getContours()
@@ -203,8 +210,9 @@ class KnPage:
       self.write_original_with_contour_and_rect_file(outdir)
       self.write_original_with_collected_boxes_to_file(outdir)
 
-  def intersect(self, box1, box2):
-      #""" box1 と box2 が交わるか接するならtrueを返す。
+  def include(self, box1, box2):
+      #""" box1 が box2 を包含するならtrueを返す。
+
       ax1,ay1,w1,h1 = box1
       ax2 = ax1 + w1
       ay2 = ay1 + h1
@@ -212,26 +220,44 @@ class KnPage:
       bx2 = bx1 + w2
       by2 = by1 + h2
 
-      if (bx1 in range(ax1 - 1, ax2 + 2)) and (by1 in range(ay1 - 1, ay2 + 2)):
+      if (ax1 <= bx1) and (bx2 <= ax2) and (ay1 <= by1) and (by2 <= ay2):
+        return True
+      else:
+        return False
+
+  def intersect(self, box1, box2):
+      #""" box1 と box2 が交わるか接するならtrueを返す。
+      xm = 20  #  x_margin 
+      ym = 8   #  y_margin 
+      ax1,ay1,w1,h1 = box1
+      ax2 = ax1 + w1
+      ay2 = ay1 + h1
+      bx1,by1,w2,h2 = box2
+      bx2 = bx1 + w2
+      by2 = by1 + h2
+
+      if (bx1 in range(ax1 - xm, ax2 + xm)) and (by1 in range(ay1 - ym, ay2 + ym)):
           return True
-      if (bx2 in range(ax1 - 1, ax2 + 2)) and (by2 in range(ay1 - 1, ay2 + 2)):
+      if (bx2 in range(ax1 - xm, ax2 + xm)) and (by2 in range(ay1 - ym, ay2 + ym)):
           return True
-      if (bx2 in range(ax1 - 1, ax2 + 2)) and (by1 in range(ay1 - 1, ay2 + 2)):
+      if (bx2 in range(ax1 - xm, ax2 + xm)) and (by1 in range(ay1 - ym, ay2 + ym)):
           return True
-      if (bx1 in range(ax1 - 1, ax2 + 2)) and (by2 in range(ay1 - 1, ay2 + 2)):
+      if (bx1 in range(ax1 - xm, ax2 + xm)) and (by2 in range(ay1 - ym, ay2 + ym)):
           return True
-      if (ax1 in range(bx1 - 1, bx2 + 2)) and (ay1 in range(by1 - 1, by2 + 2)):
+      if (ax1 in range(bx1 - xm, bx2 + xm)) and (ay1 in range(by1 - ym, by2 + ym)):
           return True
-      if (ax2 in range(bx1 - 1, bx2 + 2)) and (ay2 in range(by1 - 1, by2 + 2)):
+      if (ax2 in range(bx1 - xm, bx2 + xm)) and (ay2 in range(by1 - ym, by2 + ym)):
           return True
-      if (ax2 in range(bx1 - 1, bx2 + 2)) and (ay1 in range(by1 - 1, by2 + 2)):
+      if (ax2 in range(bx1 - xm, bx2 + xm)) and (ay1 in range(by1 - ym, by2 + ym)):
           return True
-      if (ax1 in range(bx1 - 1, bx2 + 2)) and (ay2 in range(by1 - 1, by2 + 2)):
+      if (ax1 in range(bx1 - xm, bx2 + xm)) and (ay2 in range(by1 - ym, by2 + ym)):
           return True
 
       return False
 
   def get_boundingBox(self, boxes):
+      # 入力のboxの形式は(x,y,w,h)
+      # 出力のboxの形式も(x,y,w,h)
       # (x,y,w,h) -> (x,y,x+w,y+h)
       target = [(x,y,x+w,y+h) for (x,y,w,h) in boxes]
       x1,y1,d1,d2 = map(min, zip(*target))
@@ -239,8 +265,57 @@ class KnPage:
       # (x,y,x+w,y+h) -> (x,y,x,y)
       return (x1,y1,x2-x1,y2-y1)
   
+  def sweep_included_boxes(self, boxes=None):
+      # 他のboxに完全に包含されるboxをリストから排除する
+    
+    if boxes == None:
+      self.getContours()
+      if len(self.boxes) == 0:
+          self.getCentroids()
+      boxes = self.boxes
+      flag = True
+
+    # w, h どちらかが200以上のboxは排除
+    boxes = [x for x in boxes if (x[2] < 200) and (x[3] < 200)]
+
+    temp_boxes = []
+    while len(boxes) > 0:
+      abox = boxes.pop()
+      boxes = [x for x in boxes if not self.include(abox, x)]  
+      temp_boxes = [x for x in temp_boxes if not self.include(abox, x)]
+      temp_boxes.append(abox)
+
+    if flag:
+        self.boxes = temp_boxes
+    return temp_boxes
+
+  def  flatten(self, i):
+    return reduce(lambda a,b:a+(self.flatten(b) if hasattr(b,'__iter__') else [b]), i, [])
+
+  def get_adj_boxes(self, boxes, abox):
+    if abox in boxes: boxes.remove(abox)
+
+    if len(abox) > 0:
+      ret = [x for x in boxes if self.intersect(abox, x)]  
+    else:
+      return []
+
+    if len(ret) > 0:
+      for x in ret:
+          boxes.remove(x)
+      if len(boxes) > 0:
+        for x in ret:
+          subs = self.get_adj_boxes(boxes, x)
+          ret += subs
+      else:
+        return ret
+      return ret
+    else:
+      return []
+
   def collect_boxes(self):
       #""" bounding boxを包含するboxに統合し、文字を囲むboxの取得を試みる"""
+    flatten=lambda i:reduce(lambda a,b:a+(flatten(b)if hasattr(b,'__iter__')else[b]),i,[])
       
     if len(self.boxes) == 0:
         self.getCentroids()
@@ -251,25 +326,46 @@ class KnPage:
     self.collected_boxes = []
     temp_boxes = []
 
+    f = open('self_boxes.txt', 'w')
+    f.write("self.boxes\n")
+    for box in self.boxes:
+      f.write(str(box)+"\n")
+    f.write("\n")
+    f.close()
+  
+    f = open('while_process.txt', 'w')
     while len(self.boxes) > 0:
+      f.write('len of self.boxes : ' + str(len(self.boxes))+"\n")
       abox = self.boxes.pop()
-      temp_boxes = [x for x in self.boxes if self.intersect(abox, x)]  
-      self.boxes = list(set(self.boxes) - set(temp_boxes))
+      f.write('abox : ' + str(abox)+"\n")
+      f.write('temp_boxes : ' + str(temp_boxes)+"\n")
+      #temp_boxes = [x for x in self.boxes if self.intersect(abox, x)]  
+      adjs = self.get_adj_boxes(self.boxes, abox)
+      f.write('adjs : ' + str(adjs)+"\n")
+      temp_boxes = adjs
+      #temp_boxes += adjs
+      for x in temp_boxes:
+          if x in self.boxes:  self.boxes.remove(x)
+      f.write('len of self.boxes after remove : ' + str(len(self.boxes))+"\n")
+      f.write('self.boxes after remove: ' + str(self.boxes)+"\n")
       temp_boxes.append(abox)
-      self.collected_boxes.append(self.get_boundingBox(temp_boxes))
+      f.write('temp_boxes after append: ' + str(temp_boxes)+"\n")
+      if len(temp_boxes) > 0:
+        boundingBox = self.get_boundingBox(temp_boxes)
+        f.write('boundingBox : ' + str(boundingBox)+"\n")
+        self.collected_boxes.append(boundingBox)
+        f.write('self.collected_boxes : ' + str(self.collected_boxes)+"\n")
 
+    f.close()
 
   def write_collected_boxes_to_file(self, outdir=None):
     if not hasattr(self, 'collected_boxes'):
-      self.collect_boxes()
-      self.boxes = self.collected_boxes
-      self.collect_boxes()
-      self.boxes = self.collected_boxes
       self.collect_boxes()
 
     om = np.zeros(self.img.shape,np.uint8)
     for box in self.collected_boxes:
       x,y,w,h = box
+      #cv2.rectangle(om, (x, y), (w, h), [0,0,255])
       cv2.rectangle(om, (x, y), (x+w, y+h), [0,0,255])
     self.write(self.mkFilename('_collected_box', outdir), om)
 
