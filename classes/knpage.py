@@ -314,9 +314,16 @@ class KnPage:
     else:
       return []
 
+  def write_self_boxes_to_file(self):
+    f = open('self_boxes.txt', 'w')
+    f.write("self.boxes\n")
+    for box in self.boxes:
+      f.write(str(box)+"\n")
+    f.write("\n")
+    f.close()
+      
   def collect_boxes(self):
       #""" bounding boxを包含するboxに統合し、文字を囲むboxの取得を試みる"""
-    flatten=lambda i:reduce(lambda a,b:a+(flatten(b)if hasattr(b,'__iter__')else[b]),i,[])
       
     if len(self.boxes) == 0:
         self.getCentroids()
@@ -324,37 +331,33 @@ class KnPage:
     # w, h どちらかが200以上のboxは排除
     self.boxes = [x for x in self.boxes if (x[2] < 200) and (x[3] < 200)]
 
+    self.write_self_boxes_to_file()    #for debug
+
     self.collected_boxes = []
     adjs = []
 
-    f = open('self_boxes.txt', 'w')
-    f.write("self.boxes\n")
-    for box in self.boxes:
-      f.write(str(box)+"\n")
-    f.write("\n")
-    f.close()
-  
-    f = open('while_process.txt', 'w')
+    
+    f = open('while_process.txt', 'w')    #for debug
     while len(self.boxes) > 0:
-      f.write('len of self.boxes : ' + str(len(self.boxes))+"\n")
+      f.write('len of self.boxes : ' + str(len(self.boxes))+"\n")    #for debug
       abox = self.boxes.pop()
-      f.write('abox : ' + str(abox)+"\n")
+      f.write('abox : ' + str(abox)+"\n")    #for debug
       #temp_boxes = [x for x in self.boxes if self.intersect(abox, x)]  
       adjs = self.get_adj_boxes(self.boxes, abox)
-      f.write('adjs : ' + str(adjs)+"\n")
+      f.write('adjs : ' + str(adjs)+"\n")    #for debug
       for x in adjs:
           if x in self.boxes:  self.boxes.remove(x)
-      f.write('len of self.boxes after remove : ' + str(len(self.boxes))+"\n")
-      f.write('self.boxes after remove: ' + str(self.boxes)+"\n")
+      f.write('len of self.boxes after remove : ' + str(len(self.boxes))+"\n")    #for debug
+      f.write('self.boxes after remove: ' + str(self.boxes)+"\n")    #for debug
       adjs.append(abox)
-      f.write('adjs after append: ' + str(adjs)+"\n")
+      f.write('adjs after append: ' + str(adjs)+"\n")    #for debug
       if len(adjs) > 0:
         boundingBox = self.get_boundingBox(adjs)
-        f.write('boundingBox : ' + str(boundingBox)+"\n")
+        f.write('boundingBox : ' + str(boundingBox)+"\n")    #for debug
         self.collected_boxes.append(boundingBox)
-        f.write('self.collected_boxes : ' + str(self.collected_boxes)+"\n")
+        f.write('self.collected_boxes : ' + str(self.collected_boxes)+"\n")    #for debug
 
-    f.close()
+    f.close()    #for debug
 
   def write_collected_boxes_to_file(self, outdir=None):
     if not hasattr(self, 'collected_boxes'):
