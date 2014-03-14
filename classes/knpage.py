@@ -45,12 +45,12 @@ class KnPage:
             raise
     else:
       raise
-     
+
   def read_params(self, params):
-    f = open(params)
-    lines = f.readlines()
-    self.parameters = json.loads(''.join(lines))
-    self.outfilename = self.parameters['outfilename']
+      with open(params) as f:
+        lines = f.readlines()
+      self.parameters = json.loads(''.join(lines))
+      self.outfilename = self.parameters['outfilename']
 
   def divide(self):
     self.left = None
@@ -76,7 +76,12 @@ class KnPage:
       arr.append([x])
     return arr
 
-  def mkFilename(self, fix, outdir=None):
+  def mkFilename(self, fix, outdir=None, ext=None):
+    """
+       fix : file name の末尾に付加する
+       outdir : 出力先directoryの指定
+       ext : 拡張子の指定 .txt のように、. ではじめる
+    """
     dirname = os.path.dirname(self.original_file_name) 
     basename = os.path.basename(self.original_file_name) 
     if fix == 'data':
@@ -86,7 +91,11 @@ class KnPage:
       name = name + '_data'
       ext = '.txt'
     else:
-      name, ext = os.path.splitext(basename) 
+      if ext == None:
+        name, ext = os.path.splitext(basename)
+      else:
+        name = os.path.splitext(basename)[0]
+
       if hasattr(self, 'outfilename'):
         name = self.outfilename
       name = name + fix
@@ -153,22 +162,21 @@ class KnPage:
       x,y,w,h = box
       cv2.rectangle(om, (x, y), (x+w, y+h), [0,255,0])
     self.write(self.mkFilename('_boxes', outdir), om)
-      
+
   def write_data_file(self, outdir):
     if not hasattr(self, 'contours'):
       self.getContours()
     outfilename = self.mkFilename('data', outdir)
-    f = open(outfilename, 'w')
-    f.write("contours\n")
-    for cnt in self.contours:
-      f.writelines(str(cnt))
-      f.write("\n")
-  
-    f.write("\n\nhierarchy\n")
-    for hic in self.hierarchy:
-      f.writelines(str(hic))
-      f.write("\n")
-    f.close()
+    with open(outfilename, 'w') as f:
+      f.write("contours\n")
+      for cnt in self.contours:
+        f.writelines(str(cnt))
+        f.write("\n")
+
+      f.write("\n\nhierarchy\n")
+      for hic in self.hierarchy:
+        f.writelines(str(hic))
+        f.write("\n")
 
   def write_binarized_file(self, outdir):
     if not hasattr(self, 'contours'):
@@ -212,7 +220,9 @@ class KnPage:
       self.write_original_with_collected_boxes_to_file(outdir)
 
   def include(self, box1, box2):
-      #""" box1 が box2 を包含するならtrueを返す。
+      """
+         box1 が box2 を包含するならtrueを返す。
+      """
 
       ax1,ay1,w1,h1 = box1
       ax2 = ax1 + w1
@@ -226,10 +236,13 @@ class KnPage:
       else:
         return False
 
-  def intersect(self, box1, box2):
-      #""" box1 と box2 が交わるか接するならtrueを返す。
-      xm = 20  #  x_margin 
-      ym = 8   #  y_margin 
+  def intersect(self, box1, box2, x_margin = 20, y_margin = 8):
+      """
+         box1 と box2 が交わるか接するならtrueを返す。
+         marginを指定することですこし離れていても交わっていると判定させることができる
+      """
+      xm = x_margin 
+      ym = y_margin 
       ax1,ay1,w1,h1 = box1
       ax2 = ax1 + w1
       ay2 = ay1 + h1
@@ -265,10 +278,10 @@ class KnPage:
       d1,d2,x2,y2 = map(max, zip(*target))
       # (x,y,x+w,y+h) -> (x,y,x,y)
       return (x1,y1,x2-x1,y2-y1)
-  
+
   def sweep_included_boxes(self, boxes=None):
       # 他のboxに完全に包含されるboxをリストから排除する
-    
+
     if boxes == None:
       self.getContours()
       if len(self.boxes) == 0:
@@ -293,6 +306,12 @@ class KnPage:
   def  flatten(self, i):
     return reduce(lambda a,b:a+(self.flatten(b) if hasattr(b,'__iter__') else [b]), i, [])
 
+  def show_message(f):
+      def wrapper():
+          print("function called")
+          return f()
+      return wrapper
+
   def get_adj_boxes(self, boxes, abox):
     if abox in boxes: boxes.remove(abox)
 
@@ -314,20 +333,19 @@ class KnPage:
     else:
       return []
 
-  def write_self_boxes_to_file(self):
-    f = open('self_boxes.txt', 'w')
-    f.write("self.boxes\n")
-    for box in self.boxes:
-      f.write(str(box)+"\n")
-    f.write("\n")
-    f.close()
-      
+  def write_self_boxes_to_file(self, outdir):
+    with open(self.mkFilename('_self_boxes', outdir, '.txt'), 'w') as f:
+      f.write("self.boxes\n")
+      for box in self.boxes:
+        f.write(str(box)+"\n")
+      f.write("\n")
+
   def collect_boxes(self):
-      #""" bounding boxを包含するboxに統合し、文字を囲むboxの取得を試みる"""
-      
+    """ bounding boxを包含するboxに統合し、文字を囲むboxの取得を試みる"""
+
     if len(self.boxes) == 0:
         self.getCentroids()
-        
+
     # w, h どちらかが200以上のboxは排除
     self.boxes = [x for x in self.boxes if (x[2] < 200) and (x[3] < 200)]
 
@@ -336,7 +354,6 @@ class KnPage:
     self.collected_boxes = []
     adjs = []
 
-    
     f = open('while_process.txt', 'w')    #for debug
     while len(self.boxes) > 0:
       f.write('len of self.boxes : ' + str(len(self.boxes))+"\n")    #for debug
@@ -366,7 +383,6 @@ class KnPage:
     om = np.zeros(self.img.shape,np.uint8)
     for box in self.collected_boxes:
       x,y,w,h = box
-      #cv2.rectangle(om, (x, y), (w, h), [0,0,255])
       cv2.rectangle(om, (x, y), (x+w, y+h), [0,0,255])
     self.write(self.mkFilename('_collected_box', outdir), om)
 
@@ -382,7 +398,6 @@ class KnPage:
     om = self.orig_w_collected
     for box in self.collected_boxes:
       x,y,w,h = box
-      #cv2.rectangle(om, (x, y), (w, h), [0,0,255])
       cv2.rectangle(om, (x, y), (x+w, y+h), [0,0,255])
     self.write(self.mkFilename('_orig_w_collected_box', outdir), om)
 

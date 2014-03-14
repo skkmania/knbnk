@@ -116,12 +116,10 @@ class TestKnPage(unittest.TestCase):
       kn = KnPage(fname)
       kn.write_original_with_contour_file(self.DATA_DIR)
 
-      
   def test_write_binarized_file(self):
       fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
       kn = KnPage(fname)
       kn.write_binarized_file(self.DATA_DIR)
-
 
   def test_write_original_with_contour_and_rect_file(self):
       fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
@@ -168,15 +166,22 @@ class TestKnPage(unittest.TestCase):
       fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
       kn = KnPage(fname)
       assert kn.intersect(box1, box2)
-      assert not kn.intersect(box1, box3)
-      assert not kn.intersect(box1, box4)
-      assert not kn.intersect(box1, box5)
+      assert kn.intersect(box1, box3)
+      assert not kn.intersect(box1, box3, 0, 0)
+      assert kn.intersect(box1, box3)
+      assert kn.intersect(box1, box4)
+      assert not kn.intersect(box1, box4, 0, 0)
+      assert kn.intersect(box1, box5)
+      assert not kn.intersect(box1, box5, 0, 0)
       assert kn.intersect(box2, box3)
       assert kn.intersect(box2, box4)
       assert kn.intersect(box2, box5)
-      assert not kn.intersect(box3, box4)
-      assert not kn.intersect(box3, box5)
-      assert not kn.intersect(box4, box5)
+      assert kn.intersect(box3, box4)
+      assert not kn.intersect(box3, box4, 0, 0)
+      assert kn.intersect(box3, box5)
+      assert not kn.intersect(box3, box5, 0, 0)
+      assert kn.intersect(box4, box5)
+      assert not kn.intersect(box4, box5, 0, 0)
 
   def test_get_boundingBox(self):
       box1 = (20, 30, 10, 10)
@@ -232,6 +237,12 @@ class TestKnPage(unittest.TestCase):
       fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
       kn = KnPage(fname)
       kn.write_original_with_collected_boxes_to_file(self.DATA_DIR)
+
+  def test_write_self_boxes_to_file(self):
+      fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
+      kn = KnPage(fname)
+      kn.getCentroids()
+      kn.write_self_boxes_to_file(self.DATA_DIR)
 
   def test_collect_boxes(self):
       fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
