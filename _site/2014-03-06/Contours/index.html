@@ -65,7 +65,7 @@
 </code></pre></div>
 <p>のようになる。</p>
 
-<p>imread で読みこんだ画像データを、findContours関数にわたせばその戻り値として配列が得られる。</p>
+<p>imread で読みこんだ画像データを、グレイスケールに変換し、さらに<a href="../../2014-03-17/Binarization/index.html">2値化</a>してからfindContours関数にわたせばその戻り値として配列が得られる。</p>
 
 <p>この画像は縦横が 558 pixel x 669 pixel、の小さなものだが、</p>
 
@@ -99,7 +99,7 @@
 
 <p>このcontourを元の画像に重ねて色をつけて表示してみたのが次の図となる。 各点を1pixelの赤い円で表現している。</p>
 
-<p><img src="/images/a_contour.jpg" alt="a_contour.jpg" /></p>
+<p><img src="/images/a_contour.jpg" alt="a_contour.jpg" /> <img src="/images/cont11.jpg" alt="a_contour.jpg" /></p>
 
 <p>ちなみに全てのcontourを同様に色をつけると <img src="/images/all_contours.jpg" alt="all_contours.jpg" /> となる。</p>
 
