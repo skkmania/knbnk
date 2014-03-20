@@ -2,8 +2,9 @@
 UTestWriteAllqUpytest_funcarg__knScharr1qUpytest_funcarg__knScharr3qUpytest_funcarg__knScharr2qUTestBinarizedqUTestWriteAllForAllParamsqUpytest_funcarg__kn005qUpytest_funcarg__knqUTestWriteSobelqeUtest.test_new]q(Upytest_funcarg__kn2qUDATA_DIRqU
 TestTmpDirqUtest_functionqUTestContoursqUpytest_funcarg__myfuncargqUpytest_funcarg__knqU
 TestParamsqeUtest.test_knpage]qU
-TestKnPageqaUknpage]q(UKnPageExceptionq UKnPageq!UKnPageParamsExceptionq"eUtest.test_knpage_util]q#(Upytest_funcarg__kn2q$Upytest_funcarg__knq%Ubox16q&UDATA_DIRq'U
-TestTmpDirq(Ubox11q)UHOME_DIRq*Ubox15q+UTestInterSectionq,Ubox14q-Ubox06q.Ubox12q/Ubox04q0Ubox05q1Ubox02q2Ubox03q3Ubox13q4Ubox01q5eUtest.test_knpage_basic]q6(h'h$UTestManipulateBoxesq7UTestFileNameq8UTestNewq9h+h-h&h)h4h/Utest_functionq:h*UTestBoundingRectq;h(U
-TestParamsq<UTestGradientsq=Upytest_funcarg__myfuncargq>h.h%h0h1h2h3h5eUtest.test_knpage_split]q?(Upytest_funcarg__kn2q@UDATA_DIRqAU
-TestTmpDirqBUTestSmallImageqCUHOME_DIRqDUTestGetHoughLinesPqEUTestBoundingRectqFUTestGetHoughLinesqGUpytest_funcarg__knqHUTestFileNameqIU
-TestParamsqJUTestSmallImagePqKeu.
+TestKnPageqaUknpage]q(UKnPageExceptionq UKnPageq!UKnPageParamsExceptionq"eUtest.test_knpage_util]q#(UDATA_DIRq$Upytest_funcarg__kn2q%Ubox15q&Ubox14q'Ubox16q(Ubox11q)Ubox13q*Ubox12q+UHOME_DIRq,UTestCompLineq-UTestInterSectionq.U
+TestTmpDirq/Ubox06q0Upytest_funcarg__knq1Ubox04q2Ubox05q3Ubox02q4Ubox03q5Ubox01q6eUtest.test_knpage_basic]q7(UDATA_DIRq8Upytest_funcarg__kn2q9UTestManipulateBoxesq:UTestFileNameq;UTestNewq<Ubox15q=Ubox14q>Ubox16q?Ubox11q@Ubox13qAUbox12qBUtest_functionqCUHOME_DIRqDUTestBoundingRectqEU
+TestTmpDirqFU
+TestParamsqGUTestGradientsqHUpytest_funcarg__myfuncargqIUbox06qJUpytest_funcarg__knqKUbox04qLUbox05qMUbox02qNUbox03qOUbox01qPeUtest.test_knpage_split]qQ(Upytest_funcarg__kn2qRUDATA_DIRqSU
+TestTmpDirqTUTestSmallImageqUUHOME_DIRqVUTestGetHoughLinesPqWUTestBoundingRectqXUTestGetHoughLinesqYUpytest_funcarg__knqZUTestFileNameq[U
+TestParamsq\UTestSmallImagePq]eu.

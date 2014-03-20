@@ -296,15 +296,21 @@ class KnPage:
         horv :  "h" or "v" を指定
         """
         if horv == 'h':
-            if max(line0[0][1], line0[1][1]) > max(line1[0][1], line1[1][1]):
-                return "upper"
+            if self.isHorizontal(line0) and self.isHorizontal(line1):
+                if max(line0[0][1], line0[1][1]) > max(line1[0][1], line1[1][1]):
+                    return "upper"
+                else:
+                    return "lower"
             else:
-                return "lower"
+                raise KnPageException('wrong recognition of line')
         else:
-            if max(line0[0][0], line0[1][0]) > max(line1[0][0], line1[1][0]):
-                return "right"
+            if self.isVertical(line0) and self.isVertical(line1):
+                if max(line0[0][0], line0[1][0]) > max(line1[0][0], line1[1][0]):
+                    return "right"
+                else:
+                    return "left"
             else:
-                return "left"
+                raise KnPageException('wrong recognition of line')
 
     def findCornerLine(self):
         a = self.linePoints
