@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import pytest
+from hamcrest import *
 from classes.knpage import KnPage
 from classes.knpage import KnPageException
 from classes.knpage import KnPageParamsException
@@ -49,6 +50,7 @@ class TestNew:
 
     def test_initialize_with_fname_not_existed(self):
         with pytest.raises(KnPageParamsException) as e:
+        #with pytest.raises(KnPageException) as e:
             KnPage(params='not_exist_file')
         assert 'not_exist_file' in str(e)
 
@@ -64,7 +66,11 @@ class TestNew:
         assert kn.height == 558
         assert kn.width == 669
         assert kn.depth == 3
+        assert kn.gray is not None
+        assert kn.binarized is not None
 
+    def test_new_try_hamcrest(self, kn):
+        assert_that(kn.height, equal_to(558))
 
 class TestParams:
     def pytest_funcarg__kn(request):
@@ -107,10 +113,10 @@ class TestParams:
         kn.divide()
         assert kn.left == kn.right
 
-    def test_write(self, kn):
-        #dataDirectory = tmpdir.mkdir('data')
-        #sampleFile = dataDirectory.join("sample.jpeg")
-        #kn.write(sampleFile)
+    def test_write(self, kn, tmpdir):
+        dataDirectory = tmpdir.mkdir('data')
+        sampleFile = dataDirectory.join("sample.jpeg")
+        kn.write(str(sampleFile))
         kn.write("/tmp/outfile.jpeg")
 
     def test_write_with_params(self, kn2):
@@ -120,13 +126,29 @@ class TestParams:
 
 
 class TestTmpDir:
-    @pytest.fixture
     def test_write(self, kn, tmpdir):
         dataDirectory = tmpdir.mkdir('data')
-        sampleFile = dataDirectory.join("sample.jpeg")
+        sampleFile = str(dataDirectory.join("sample.jpeg"))
         kn.write(sampleFile)
-        assert sampleFile == '/tmp/data/sample.jpe'
+        assert 'sample.jpeg' in sampleFile
 
+
+class TestGradients:
+    @pytest.mark.parametrize("idx", [1, 2, 3])
+    def test_write(elf, idx):
+        fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
+        paramfname = DATA_DIR + '/twletters_gradients_0' + str(idx) + '.json'
+        kn = KnPage(fname, datadir=DATA_DIR, params=paramfname)
+        kn.getGradients()
+        kn.write_gradients(DATA_DIR)
+
+    @pytest.mark.parametrize("idx", [1, 3, 5, 7])
+    def test_write_sobel(elf, idx):
+        fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
+        paramfname = DATA_DIR + '/twletters_sobel_k_' + str(idx) + '.json'
+        kn = KnPage(fname, datadir=DATA_DIR, params=paramfname)
+        kn.getGradients()
+        kn.write_gradients(DATA_DIR)
 
 class TestFileName:
     def test_mkFilename(self, kn):

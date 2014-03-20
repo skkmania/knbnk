@@ -1,37 +1,16 @@
 # -*- coding: utf-8 -*-
 import pytest
-from hamcrest import *
 from classes.knpage import KnPage
 from classes.knpage import KnPageException
 from classes.knpage import KnPageParamsException
 
 HOME_DIR = '/home/skkmania'
 DATA_DIR = HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data'
-box01 = (20, 30, 10, 10)
-box02 = (25, 35, 15, 15)
-box03 = (35, 45, 10, 10)
-box04 = (35, 20, 20, 20)
-box05 = (10, 45, 20, 20)
-box06 = (27, 37, 10, 10)
-box11 = (120, 30, 10, 10)
-box12 = (125, 35, 15, 15)
-box13 = (135, 45, 10, 10)
-box14 = (135, 20, 20, 20)
-box15 = (110, 45, 20, 20)
-box16 = (127, 37, 10, 10)
-
-
-def pytest_funcarg__myfuncarg(request):
-        return 42
-
-
-def test_function(myfuncarg):
-        assert myfuncarg == 42
 
 
 def pytest_funcarg__kn(request):
-    img_fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
-    params_fname = DATA_DIR + '/twletters_01.json'
+    img_fname = '/home/skkmania/workspace/pysrc/knbnk/data/005.jpeg'
+    params_fname = DATA_DIR + '/005_split_01.json'
     kn = KnPage(fname=img_fname, datadir=DATA_DIR, params=params_fname)
     return kn
 
@@ -42,35 +21,61 @@ def pytest_funcarg__kn2(request):
     return KnPage(fname, params=params_file_name)
 
 
-class TestNew:
-    def test_initialize_without_params(self):
-        with pytest.raises(KnPageException) as e:
-            KnPage()
-        assert 'params is None' in str(e)
+class TestGetHoughLinesP:
+    def test_getHoughLinesP(self, kn):
+        kn.prepareForLines()
+        kn.getHoughLinesP()
 
-    def test_initialize_with_fname_not_existed(self):
-        with pytest.raises(KnPageParamsException) as e:
-        #with pytest.raises(KnPageException) as e:
-            KnPage(params='not_exist_file')
-        assert 'not_exist_file' in str(e)
+    def test_write_lines_to_file(self, kn):
+        kn.prepareForLines()
+        kn.getHoughLinesP()
+        kn.write_linesP_to_file(DATA_DIR)
 
-    def test_initialize_with_imcomplete_param_file(self):
-        with pytest.raises(KnPageParamsException) as e:
-            KnPage(params=DATA_DIR + '/imcomplete_sample.json')
-        assert 'must be' in str(e)
 
-    def test_new(self, kn):
-        assert kn.img is not None
-        assert kn.img.shape != (100, 100, 3)
-        assert kn.img.shape == (558, 669, 3)
-        assert kn.height == 558
-        assert kn.width == 669
-        assert kn.depth == 3
-        assert kn.gray is not None
-        assert kn.binarized is not None
+class TestGetHoughLines:
+    def test_prepareForLines(self, kn):
+        kn.prepareForLines()
 
-    def test_new_try_hamcrest(self, kn):
-        assert_that(kn.height, equal_to(558))
+    def test_getHoughLines(self, kn):
+        kn.prepareForLines()
+        kn.getHoughLines()
+
+    def test_write_lines_to_file(self, kn):
+        kn.prepareForLines()
+        kn.getHoughLines()
+        kn.write_lines_to_file(DATA_DIR)
+        assert len(kn.lines) > 0
+
+
+class TestSmallImage:
+    def test_get_small_img_with_lines(self, kn):
+        kn.prepareForLines()
+        kn.getHoughLines()
+        kn.get_small_img_with_lines()
+        assert kn.small_img is not None
+
+    def test_write_small_img(self, kn):
+        kn.prepareForLines()
+        kn.getHoughLines()
+        kn.write_small_img(DATA_DIR)
+        assert kn.small_img is not None
+
+    def test_write_small_img_with_lines(self, kn):
+        kn.prepareForLines()
+        kn.getHoughLines()
+        kn.get_small_img_with_lines()
+        kn.write_small_img_with_lines(DATA_DIR)
+        assert kn.small_img is not None
+
+
+class TestSmallImageP:
+    def test_get_small_img_with_linesP(self, kn):
+        kn.prepareForLines()
+        kn.getHoughLinesP()
+        kn.get_small_img_with_linesP()
+        kn.write_small_img_with_linesP(DATA_DIR)
+        assert kn.small_img_with_linesP is not None
+
 
 class TestParams:
     def pytest_funcarg__kn(request):
@@ -113,10 +118,10 @@ class TestParams:
         kn.divide()
         assert kn.left == kn.right
 
-    def test_write(self, kn, tmpdir):
-        dataDirectory = tmpdir.mkdir('data')
-        sampleFile = dataDirectory.join("sample.jpeg")
-        kn.write(str(sampleFile))
+    def test_write(self, kn):
+        #dataDirectory = tmpdir.mkdir('data')
+        #sampleFile = dataDirectory.join("sample.jpeg")
+        #kn.write(sampleFile)
         kn.write("/tmp/outfile.jpeg")
 
     def test_write_with_params(self, kn2):
@@ -126,29 +131,13 @@ class TestParams:
 
 
 class TestTmpDir:
+    @pytest.fixture
     def test_write(self, kn, tmpdir):
         dataDirectory = tmpdir.mkdir('data')
-        sampleFile = str(dataDirectory.join("sample.jpeg"))
+        sampleFile = dataDirectory.join("sample.jpeg")
         kn.write(sampleFile)
-        assert 'sample.jpeg' in sampleFile
+        assert sampleFile == '/tmp/data/sample.jpe'
 
-
-class TestGradients:
-    @pytest.mark.parametrize("idx", [1, 2, 3])
-    def test_write(elf, idx):
-        fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
-        paramfname = DATA_DIR + '/twletters_gradients_0' + str(idx) + '.json'
-        kn = KnPage(fname, datadir=DATA_DIR, params=paramfname)
-        kn.getGradients()
-        kn.write_gradients(DATA_DIR)
-
-    @pytest.mark.parametrize("idx", [1, 3, 5, 7])
-    def test_write_sobel(elf, idx):
-        fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
-        paramfname = DATA_DIR + '/twletters_sobel_k_' + str(idx) + '.json'
-        kn = KnPage(fname, datadir=DATA_DIR, params=paramfname)
-        kn.getGradients()
-        kn.write_gradients(DATA_DIR)
 
 class TestFileName:
     def test_mkFilename(self, kn):
@@ -212,28 +201,3 @@ class TestBoundingRect:
         kn.write_boxes_to_file(DATA_DIR)
 
 
-class TestManipulateBoxes:
-    def test_get_adj_boxes(self, kn):
-        boxes = [box01,box02,box03,box04,box05,box06, box11,box12,box13,box14,box15,box16]
-        result = kn.get_adj_boxes(boxes, box01)
-        assert list( set(result) - set([box01,box02,box03,box04,box05,box06]) )  == []
-
-    def test_write_original_with_contour_and_rect_file(self, kn):
-        kn.write_original_with_collected_boxes_to_file(DATA_DIR)
-
-    def test_write_boxes_to_file(self, kn):
-        kn.getCentroids()
-        kn.write_boxes_to_file(DATA_DIR)
-
-    def test_collect_boxes(self, kn):
-        kn.collect_boxes()
-        kn.write_collected_boxes_to_file(DATA_DIR)
-        kn.write_original_with_collected_boxes_to_file(DATA_DIR)
-
-#class TestSeparate:
-#    def test_separate(self, kn):
-#        kn.getCentroids()
-#        arr = kn.centroids
-#        x = range(1, len(arr))
-#        actual = kn.separate(arr, x)
-#        assert len(actual) > 0

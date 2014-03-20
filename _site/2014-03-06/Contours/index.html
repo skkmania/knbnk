@@ -15,7 +15,7 @@
 <div class='main'>
   <h2 id="contours">Contoursとは</h2>
 
-<p><a href="http://docs.opencv.org/trunk/modules/imgproc/doc/structural_analysis_and_shape_descriptors.html?highlight=contour#cv2.findContours">opencvのfindContours</a>により得られるデータ。この関数は与えられた画像のなかである形を検出すると、その輪郭となる曲線を一連の点で表現して返す。 例は <a href="https://www.google.co.jp/search?q=opencv+contour+sample+image&client=firefox-aurora&hs=3OS&rls=org.mozilla:ja-JP-mac:unofficial&hl=ja&channel=fflb&tbm=isch&tbo=u&source=univ&sa=X&ei=ogUYU4_iM4yNkwWl5IHwDw&ved=0CCcQsAQ&biw=1280&bih=925">netで検索すれば</a>大量にみつかる。</p>
+<p><a href="http://docs.opencv.org/trunk/modules/imgproc/doc/structural_analysis_and_shape_descriptors.html?highlight=contour#cv2.findContours">opencvのfindContours</a>により得られるデータ。 画像のなかになんらかの形を検出し、その輪郭となる曲線を一連の点で表現して返す。 例は <a href="https://www.google.co.jp/search?q=opencv+contour+sample+image&client=firefox-aurora&hs=3OS&rls=org.mozilla:ja-JP-mac:unofficial&hl=ja&channel=fflb&tbm=isch&tbo=u&source=univ&sa=X&ei=ogUYU4_iM4yNkwWl5IHwDw&ved=0CCcQsAQ&biw=1280&bih=925">netで検索すれば</a>大量にみつかる。</p>
 
 <p>この関数を近デジの書籍のページ画像に適用して、文字の切り出しに活用してみよう、というのがこのページの趣旨である。</p>
 
@@ -44,14 +44,18 @@
 
 <li>その配列
 <ul>
-<li>findContoursは画像から検出したすべてのcontourをひとつの配列として戻り値を構成するのである。</li>
+<li>findContoursは検出したすべてのcontourをひとつの配列として戻り値とする。</li>
 </ul>
 </li>
 </ul>
 
 <h2 id="sample_image">Sample Image</h2>
 
-<p>これは近デジから取得した画像の断片である。 <img src="/images/twletters.jpg" alt="twletters.jpg" /> この例を使い、実際にcontourを求めその活用法を述べる。</p>
+<p>これは近デジから取得した画像の断片である。</p>
+
+<p><img src="/images/twletters.jpg" alt="twletters.jpg" /></p>
+
+<p>この例を使い、実際にcontourを求め活用してみる。</p>
 
 <h2 id="code">Code</h2>
 
@@ -67,12 +71,14 @@
 
 <p>imread で読みこんだ画像データを、グレイスケールに変換し、さらに<a href="../../2014-03-17/Binarization/index.html">2値化</a>してからfindContours関数にわたせばその戻り値として配列が得られる。</p>
 
-<p>この画像は縦横が 558 pixel x 669 pixel、の小さなものだが、</p>
-
-<p>次に示すようにこの画像から検出したcontours配列の長さ(contourの数)は217、それぞれのcontourが含む点の数も次のようなものとなる。</p>
+<p>この画像は縦横が 558 pixel x 669 pixel、の小さなものだが、 ret,thresh = cv2.threshold(gray, thresh_low=50, thresh_high=150, 0) とPdbを使い実行してみた結果を次に示す。</p>
 <div class='highlight'><pre><code class='python'><span class='p'>(</span><span class='n'>Pdb</span><span class='p'>)</span> <span class='nb'>len</span><span class='p'>(</span><span class='n'>contours</span><span class='p'>)</span>
 <span class='mi'>217</span>
-<span class='p'>(</span><span class='n'>Pdb</span><span class='p'>)</span> <span class='p'>[</span><span class='nb'>len</span><span class='p'>(</span><span class='n'>x</span><span class='p'>)</span> <span class='k'>for</span> <span class='n'>x</span> <span class='ow'>in</span> <span class='n'>contours</span><span class='p'>]</span>
+</code></pre></div>
+<p>この画像から検出したcontours配列の長さ(contourの数)は217ということ。 この数値はもちろん画像の内容に依存するが、同じ内容の画像であっても 2値化の方法(threshold, Canny, AdaptiveThreshold)やパラメータ(閾値など)にも依存して変化する。</p>
+
+<p>それぞれのcontourが含む点の数も示してみる。</p>
+<div class='highlight'><pre><code class='python'><span class='p'>(</span><span class='n'>Pdb</span><span class='p'>)</span> <span class='p'>[</span><span class='nb'>len</span><span class='p'>(</span><span class='n'>x</span><span class='p'>)</span> <span class='k'>for</span> <span class='n'>x</span> <span class='ow'>in</span> <span class='n'>contours</span><span class='p'>]</span>
 <span class='p'>[</span><span class='mi'>14</span><span class='p'>,</span> <span class='mi'>20</span><span class='p'>,</span> <span class='mi'>19</span><span class='p'>,</span> <span class='mi'>22</span><span class='p'>,</span> <span class='mi'>40</span><span class='p'>,</span> <span class='mi'>12</span><span class='p'>,</span> <span class='mi'>6</span><span class='p'>,</span> <span class='mi'>14</span><span class='p'>,</span> <span class='mi'>26</span><span class='p'>,</span> <span class='mi'>4</span><span class='p'>,</span> <span class='mi'>22</span><span class='p'>,</span> <span class='mi'>11</span><span class='p'>,</span> <span class='mi'>8</span><span class='p'>,</span> <span class='mi'>7</span><span class='p'>,</span> <span class='mi'>7</span><span class='p'>,</span> <span class='mi'>36</span><span class='p'>,</span> <span class='mi'>51</span><span class='p'>,</span> <span class='mi'>6</span><span class='p'>,</span> <span class='mi'>18</span><span class='p'>,</span>
  <span class='mi'>11</span><span class='p'>,</span> <span class='mi'>13</span><span class='p'>,</span> <span class='mi'>6</span><span class='p'>,</span> <span class='mi'>6</span><span class='p'>,</span> <span class='mi'>9</span><span class='p'>,</span> <span class='mi'>4</span><span class='p'>,</span> <span class='mi'>31</span><span class='p'>,</span> <span class='mi'>12</span><span class='p'>,</span> <span class='mi'>46</span><span class='p'>,</span> <span class='mi'>6</span><span class='p'>,</span> <span class='mi'>6</span><span class='p'>,</span> <span class='mi'>6</span><span class='p'>,</span> <span class='mi'>10</span><span class='p'>,</span> <span class='mi'>7</span><span class='p'>,</span> <span class='mi'>13</span><span class='p'>,</span> <span class='mi'>10</span><span class='p'>,</span> <span class='mi'>1</span><span class='p'>,</span> <span class='mi'>6</span><span class='p'>,</span> <span class='mi'>34</span><span class='p'>,</span> <span class='mi'>6</span><span class='p'>,</span>
  <span class='mi'>9</span><span class='p'>,</span> <span class='mi'>6</span><span class='p'>,</span> <span class='mi'>8</span><span class='p'>,</span> <span class='mi'>29</span><span class='p'>,</span> <span class='mi'>5</span><span class='p'>,</span> <span class='mi'>24</span><span class='p'>,</span> <span class='mi'>13</span><span class='p'>,</span> <span class='mi'>6</span><span class='p'>,</span> <span class='mi'>23</span><span class='p'>,</span> <span class='mi'>13</span><span class='p'>,</span> <span class='mi'>6</span><span class='p'>,</span> <span class='mi'>4</span><span class='p'>,</span> <span class='mi'>6</span><span class='p'>,</span> <span class='mi'>44</span><span class='p'>,</span> <span class='mi'>6</span><span class='p'>,</span> <span class='mi'>16</span><span class='p'>,</span> <span class='mi'>25</span><span class='p'>,</span> <span class='mi'>4</span><span class='p'>,</span> <span class='mi'>10</span><span class='p'>,</span> <span class='mi'>6</span><span class='p'>,</span>

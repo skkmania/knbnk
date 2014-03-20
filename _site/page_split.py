@@ -15,21 +15,20 @@ sys.stdin = codecs.getreader('utf_8')(sys.stdin)
 # 小さいほうが速いけど、小さすぎると小さい線が見つからなくなる.
 #cvHoughLines2のパラメータもこれをベースに決める.
 SCALE_SIZE = 640.0
- 
+
 # 最低オフセットが存在することを想定する(px).
 # 真ん中にある謎の黒い線の上下をtop,bottomに選択しないためのテキトウな処理で使う.
 HARD_OFFSET = 32
-  
+
 # ページ中心のズレの許容範囲(px / 2).
 #  余白を切った矩形の中心からこの距離範囲の間でページの中心を決める.
 CENTER_RANGE = 64
-   
+
 # 中心を決める際に使う線の最大数.
 CENTER_SAMPLE_MAX = 1024
-    
+
 # 中心決めるときのクラスタ数 */
 CENTER_K = 3
-     
      float_cmp(const void *p1, const void *p2)
      {
          if (*(const float *)p1 ]]> *(const float *)p2) {
@@ -39,13 +38,12 @@ CENTER_K = 3
                  }
              return 0;
            }
-            
 int top, left, right, bottom,
 center, center_base, samples;
 CvMat *center_samples = cvCreateMat(CENTER_SAMPLE_MAX, 1, CV_32FC1);
 CvMat *labels = cvCreateMat(CENTER_SAMPLE_MAX, 1, CV_32SC1);
- 
- 
+
+
 # リサイズしたエッジ画像から確率的ハフ変換で線を検出する */
 def get_lines(img):
   height, width, depth = img.shape
@@ -54,7 +52,7 @@ def get_lines(img):
   cv2.resize(img, small_img)
   small_img_gray = cv2.cvtColor(small_img,cv2.COLOR_BGR2GRAY)
   cv2.canny(small_img_gray, small_img_gray, 50, 200, 3);
-   
+
   lines = cv2.HoughLines(small_img_gray,OpenCV::CV_HOUGH_PROBABILISTIC, 1, CV_PI / 2, 50, 32, 16)
   #lines = cv2.HoughLines(small_img_gray,OpenCV::CV_HOUGH_PROBABILISTIC,  1, 1.57, 50, 50, 32 )
   return lines
@@ -66,14 +64,14 @@ def get_margin(lines, width, height):
   bottom = 0
   left = 9999
   right = 0
-  for line in lines: 
+  for line in lines:
     points = line.points
     if (abs(points[0].x - points[1].x) ]]> abs(points[0].y - points[1].y))
       # 横線
       for j in [0,1]:
         if (top > points[j].y and points[j].y > HARD_OFFSET)
           top = points[j].y
-        
+
       if (bottom < points[j].y and points[j].y < height - HARD_OFFSET)
         bottom = points[j].y
     else
@@ -81,7 +79,7 @@ def get_margin(lines, width, height):
       for j in [0,1]:
         if (left > points[j].x and points[j].x > HARD_OFFSET)
           left = points[j].x
-          
+
       if (right < points[j].x and points[j].x < width - HARD_OFFSET)
         right = points[j].x
 
@@ -95,7 +93,7 @@ def write_lines
     tmp[1].x = (int)(points[1].x / scale);
     tmp[1].y = (int)(points[1].y / scale);
     cvLine(img, tmp[0], tmp[1], CV_RGB (255, 0, 0), 1, 8, 0);
-     
+
     if (abs(points[0].x - points[1].x) ]]> abs(points[0].y - points[1].y)) {
         cvLine(img, tmp[0], tmp[1], CV_RGB (0, 0, 255), 1, 8, 0);
         } else {
@@ -104,11 +102,11 @@ def write_lines
         }
         #endif
         }
-         
+
          # 左右の分割点を決める */
-          
+
           # 中心あたりをサンプリング */
-           
+
            center_base = left + (right - left) / 2;
            center = center_base;
            samples = 0;
@@ -143,16 +141,16 @@ def write_lines
                  }
                }
            _break:
-              
+
 # クラスタリングして中心を決める */
 def take_center:
   if (samples > CENTER_K)
     label_centers[CENTER_K] = {0};
     label_counts[CENTER_K] = {0};
-     
+
     center_samples->rows = samples;
     labels->rows = samples;
-    cvKMeans2(center_samples, CENTER_K, labels, cvTermCriteria(CV_TERMCRIT_ITER, 50, 1.0), 
+    cvKMeans2(center_samples, CENTER_K, labels, cvTermCriteria(CV_TERMCRIT_ITER, 50, 1.0),
       1, 0, 0, 0, 0);
     for (i = 0; i < samples; ++i) {
       int label = CV_MAT_ELEM(*labels, int, i, 0);
@@ -169,7 +167,7 @@ def take_center:
       } else {
           center = center_base;
                               }
-                           
+
           left_page->x = (int)(left / scale);
           left_page->y = (int)(top / scale);
           left_page->width = (int)(center / scale) - left_page->x;
@@ -178,7 +176,7 @@ def take_center:
           right_page->y = (int)(top / scale);
           right_page->width = (int)(right / scale) - right_page->x;
           right_page->height = left_page->height;
-           
+
            center_samples->rows = CENTER_SAMPLE_MAX;
            labels->rows = CENTER_SAMPLE_MAX;
            cvReleaseImage (&small_img);
@@ -186,10 +184,10 @@ def take_center:
            cvReleaseMemStorage (&storage);
            cvReleaseMat(&center_samples);
            cvReleaseMat(&labels);
-            
+
             return 0;
           }
-           
+
 def output_result:
   # ページの結果を表示してみる
                ret = page_split(img, &left_page, &right_page);
@@ -201,10 +199,10 @@ def output_result:
                  rightage.x, right_page.y),
                cvPoint(right_page.x + right_page.width, rile);
                right_page->width = (int)(right / scale) - right_page->x
-                
+
                cvShowImage= CENTER_SAMPLE_MAX;
                labels->rows = CENTER_SAMPLE_MAX;
-                               
+
 
 def separate(arr, x):
   if x[1] - arr[-1][-1][1] < 15:
@@ -212,7 +210,7 @@ def separate(arr, x):
   else:
     arr.append([x])
   return arr
- 
+
 infilename = sys.argv[1]
 outfilename = 'conts_' + infilename
 centsfilename = 'cents_' + infilename
@@ -266,4 +264,4 @@ for ar in grouped_centroids:
   for p in ar:
     print "  " + str(p[0]) + ", " + str(p[1])
   cnt = cnt + 1
- 
+

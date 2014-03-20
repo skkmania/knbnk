@@ -29,16 +29,6 @@ CENTER_SAMPLE_MAX = 1024
 
 # 中心決めるときのクラスタ数 */
 CENTER_K = 3
-     float_cmp(const void *p1, const void *p2)
-     {
-         if (*(const float *)p1 ]]> *(const float *)p2) {
-             return 1;
-             } else if (*(const float *)p1 < *(const float *)p2) {
-                 return -1;
-                 }
-             return 0;
-           }
-int top, left, right, bottom,
 center, center_base, samples;
 CvMat *center_samples = cvCreateMat(CENTER_SAMPLE_MAX, 1, CV_32FC1);
 CvMat *labels = cvCreateMat(CENTER_SAMPLE_MAX, 1, CV_32SC1);

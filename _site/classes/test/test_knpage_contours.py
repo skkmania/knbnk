@@ -5,8 +5,10 @@ DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data'
 
 
 def pytest_funcarg__kn(request):
-    fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
-    return KnPage(fname, datadir=DATA_DIR)
+    img_fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
+    params_fname = DATA_DIR + '/twletters_01.json'
+    kn = KnPage(fname=img_fname, datadir=DATA_DIR, params=params_fname)
+    return kn
 
 
 def pytest_funcarg__kn2(request):
@@ -18,37 +20,37 @@ def pytest_funcarg__kn2(request):
 def pytest_funcarg__knSobel1(request):
     fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
     params_file_name = DATA_DIR + '/twletters_sobel_1.json'
-    return KnPage(fname, params=params_file_name)
+    return KnPage(fname=fname, datadir=DATA_DIR, params=params_file_name)
 
 
 def pytest_funcarg__knSobel2(request):
     fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
     params_file_name = DATA_DIR + '/twletters_sobel_2.json'
-    return KnPage(fname, params=params_file_name)
+    return KnPage(fname=fname, datadir=DATA_DIR, params=params_file_name)
 
 
 def pytest_funcarg__knSobel3(request):
     fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
     params_file_name = DATA_DIR + '/twletters_sobel_3.json'
-    return KnPage(fname, params=params_file_name)
+    return KnPage(fname=fname, datadir=DATA_DIR, params=params_file_name)
 
 
 def pytest_funcarg__knScharr1(request):
     fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
     params_file_name = DATA_DIR + '/twletters_scharr_1.json'
-    return KnPage(fname, params=params_file_name)
+    return KnPage(fname=fname, datadir=DATA_DIR, params=params_file_name)
 
 
 def pytest_funcarg__knScharr2(request):
     fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
     params_file_name = DATA_DIR + '/twletters_scharr_2.json'
-    return KnPage(fname, params=params_file_name)
+    return KnPage(fname=fname, datadir=DATA_DIR, params=params_file_name)
 
 
 def pytest_funcarg__knScharr3(request):
     fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
     params_file_name = DATA_DIR + '/twletters_scharr_3.json'
-    return KnPage(fname, params=params_file_name)
+    return KnPage(fname=fname, datadir=DATA_DIR, params=params_file_name)
 
 
 def pytest_funcarg__kn005(request):

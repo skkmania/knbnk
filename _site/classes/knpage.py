@@ -1,18 +1,48 @@
 # -*- coding: utf-8 -*-
 # params_file :  parameterをjson形式であらわしたテキストファイルboundingRectの大きさ指定
-# params_file の書式 :
+# params_file の書式 :  json text
+#     注意：commaの有無
+#      文字列のquotation 数字、配列以外は文字列なので""でくくること
 #   {
-#     "fname"        : "text",                 # img file name
-#     "datadir"      : "text",                 # data所在directory
-#     "boundingRect" : [min, max],             # boundingRect の大きさ指定
-#     "mode"         : findContoursのmode,     # EXTERNAL, LIST, CCOMP, TREE
-#     "method"       : findContoursのmethod,   # NONE, SIMPLE, L1, KCOS
-#   以下の5つは排他。どれかひとつを指定。配列内の意味はopencvのdocを参照のこと
+#     以下は必須
+#     "imgfname"     : "string"                 #  読み込む画像filename (full path)
+#     "outdir"       : "string"                 #  出力するfileのdirectory
+#     "paramfname"   : "string"                 # parameter file name
+#                             (つまりこのfile自身のfull path)
+#     以下は任意
+#     "outfilename"  : "string",                # 出力するfileのbasenameを指定
+#     "boundingRect" : [min, max],              # boundingRectの大きさ指定
+#     "mode"         : findContoursのmode,      # EXTERNAL, LIST, CCOMP, TREE
+#     "method"       : findContoursのmethod,    # NONE, SIMPLE, L1, KCOS
+
+#   以下の3つは排他。どれかひとつを指定。配列内の意味はopencvのdocを参照のこと
+#     2値化のやりかたを決める重要な設定項目。
 #     "canny"        : [threshold1, threshold2],
 #     "threshold"    : [thresh, maxval, type],
 #     "adaptive"     : [maxval, method, type, blockSize, C]
-#     "sccharr"       : [ddepth, dx, dy, blockSize, C]
-#     ""sobel"        : [depth, dx, dy]
+
+#   以下の3つはgradientsのparameter。配列内の意味はopencvのdocを参照のこと
+#     本プロジェクトには意味がない。
+#     "scharr"       : [depth, dx, dy, scale, delta, borderType]
+#     "sobel"        : [depth, dx, dy, ksize]
+#     "laplacian"    : [depth]
+#       これらのdepth は6 (=cv2.CV_64F)とするのが一般的
+#
+#   以下はpage_splitのparameter
+# 処理するときの縦サイズ(px).
+# 小さいほうが速いけど、小さすぎると小さい線が見つからなくなる.
+#cvHoughLines2のパラメータもこれをベースに決める.
+#     "scale_size"   : num  # 640.0 など対象画像の細かさに依存
+# 最低オフセットが存在することを想定する(px).
+# 真ん中にある謎の黒い線の上下をtop,bottomに選択しないためのテキトウな処理で使う.
+#     "hard_offset"  : num  # 32
+# ページ中心のズレの許容範囲(px / 2).
+#  余白を切った矩形の中心からこの距離範囲の間でページの中心を決める.
+#     "center_range" : num  # 64
+# 中心を決める際に使う線の最大数.
+#     "CENTER_SAMPLE_MAX" : num  # 1024
+# 中心決めるときのクラスタ数
+#     "CENTER_K" : num  # 3
 #   }
 #
 #  5つのfileを生成する
@@ -23,7 +53,7 @@
 #      出力4 :  contourのみを書いたファイル
 #      出力5 :  contourとそのboundingRectを重ね書きしたファイル
 
-#import sys
+import sys
 import numpy as np
 
 import cv2
@@ -44,6 +74,10 @@ class KnPageException(Exception):
 
     def printException(self):
         print "KnPage Exception."
+
+    @classmethod
+    def paramsFileNotFound(self, value):
+        print '%s not found.' % value
 
     @classmethod
     def initException(self):
@@ -69,6 +103,7 @@ class KnPage:
             self.get_img()
         else:
             raise KnPageParamsException(params)
+            # raise KnPageException.paramsFileNotFound(params)
 
     def read_params(self, params):
         with open(params) as f:
@@ -79,7 +114,7 @@ class KnPage:
             self.outdir = self.parameters['outdir']
             self.paramfname = self.parameters['paramfname']
         except KeyError as e:
-            msg = 'key : ' + str(e) + ' must be in parameter file'
+            msg = 'key : %s must be in parameter file' % str(e)
             print msg
             raise KnPageParamsException(msg)
         self.outfilename = self.parameters['outfilename']
@@ -93,8 +128,10 @@ class KnPage:
                 self.height, self.width, self.depth = self.img.shape
                 self.centroids = []
                 self.boxes = []
+                self.gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
+                self.getBinarized()
         else:
-            raise KnPageException(self.imgfname + 'not found')
+            raise KnPageException('%s not found' % self.imgfname)
 
     def divide(self):
         self.left = None
@@ -172,58 +209,208 @@ class KnPage:
         binarize された配列を self.binarized にセットする
         parameters必須。
         """
-        self.gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
-        if hasattr(self, 'parameters'):
-            if 'threshold' in self.parameters:
-                thresh_low, thresh_high, typeval = self.parameters['threshold']
-                ret, self.binarized =\
-                    cv2.threshold(self.gray, thresh_low, thresh_high, typeval)
-            elif 'sobel' in self.parameters:
-                ddepth, dx, dy = self.parameters['sobel']
-                self.binarized = cv2.Sobel(self.gray, ddepth, dx, dy)
-            elif 'scharr' in self.parameters:
-                ddepth, dx, dy = self.parameters['scharr']
-                self.binarized = cv2.Scharr(self.gray, ddepth, dx, dy)
-            elif 'canny' in self.parameters:
-                minval, maxval = self.parameters['canny']
-                self.binarized = cv2.Canny(self.gray, minval, maxval)
-            elif 'adaptive' in self.parameters:
-                self.binarized =\
-                    cv2.adaptiveThreshold(self.gray,
-                                          self.parameters['adaptive'])
-        else:
-            raise
+        if 'threshold' in self.parameters:
+            thresh_low, thresh_high, typeval = self.parameters['threshold']
+            ret, self.binarized =\
+                cv2.threshold(self.gray, thresh_low, thresh_high, typeval)
+        elif 'canny' in self.parameters:
+            minval, maxval = self.parameters['canny']
+            self.binarized = cv2.Canny(self.gray, minval, maxval)
+        elif 'adaptive' in self.parameters:
+            self.binarized =\
+                cv2.adaptiveThreshold(self.gray,
+                                      self.parameters['adaptive'])
 
-    # contourの配列を返す
+    def getGradients(self):
+        """
+        self.img のgradients を self.gradients_* にセットする
+        parameters必須。
+        """
+        if 'sobel' in self.parameters:
+            ddepth, dx, dy, ksize = self.parameters['sobel']
+            self.gradients_sobel = cv2.Sobel(self.gray, ddepth, dx, dy, ksize)
+        if 'scharr' in self.parameters:
+            ddepth, dx, dy = self.parameters['scharr']
+            self.gradients_scharr = cv2.Scharr(self.gray, ddepth, dx, dy)
+        if 'laplacian' in self.parameters:
+            ddepth = self.parameters['laplacian'][0]
+            self.gradients_laplacian = cv2.Laplacian(self.gray, ddepth)
+
     def getContours(self, thresh_low=50, thresh_high=255):
         """
-        self.gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
-        if hasattr(self, 'parameters'):
-            if 'threshold' in self.parameters:
-                thresh_low, thresh_high, typeval = self.parameters['threshold']
-                ret, self.thresh =\
-                    cv2.threshold(self.gray, thresh_low, thresh_high, typeval)
-            elif 'canny' in self.parameters:
-                minval, maxval = self.parameters['canny']
-                self.thresh = cv2.Canny(self.gray, minval, maxval)
-            elif 'adaptive' in self.parameters:
-                self.thresh =\
-                    cv2.adaptiveThreshold(self.gray,
-                                          self.parameters['adaptive'])
-        else:
-            ret, self.thresh =\
-                cv2.threshold(self.gray, thresh_low, thresh_high, 0)
+        contourの配列を返す
         """
-        self.getBinarized()
         self.contours, self.hierarchy =\
             cv2.findContours(self.binarized,
                              cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+
+    def prepareForLines(self):
+        if 'scale_size' in self.parameters:
+            self.scale_size = self.parameters['scale_size']
+            self.scale = self.scale_size / self.width
+        else:
+            raise KnPageParamsException('scale_size must be in param file')
+
+    def getHoughLines(self):
+        self.small_img = cv2.resize(self.img,
+                                    (int(self.width * self.scale),
+                                     int(self.height * self.scale)))
+        self.small_img_gray = cv2.cvtColor(self.small_img, cv2.COLOR_BGR2GRAY)
+        self.small_img_canny = cv2.Canny(self.small_img_gray,
+                                         50, 200, apertureSize=3)
+        self.lines = cv2.HoughLines(self.small_img_canny, 1, np.pi / 180, 120)
+
+    def getHoughLinesP(self):
+        self.small_img = cv2.resize(self.img,
+                                    (int(self.width * self.scale),
+                                     int(self.height * self.scale)))
+        self.small_img_gray = cv2.cvtColor(self.small_img, cv2.COLOR_BGR2GRAY)
+        self.small_img_canny = cv2.Canny(self.small_img_gray,
+                                         50, 200, apertureSize=3)
+        self.linesP = cv2.HoughLinesP(self.small_img_canny,
+                                      1, np.pi / 180, 120)
+
+    def getLinePoints(self):
+        """
+        HoughLinesで取得するlines は
+            [[rho, theta],...]
+        と表現される。 それを
+            [[(x1,y1), (x2,y2)],...]
+        に変換する
+        """
+        self.linePoints = []
+        for rho, theta in self.lines[0]:
+            a = np.cos(theta)
+            b = np.sin(theta)
+            x0 = a * rho
+            y0 = b * rho
+            x1 = int(x0 + 1000 * (-b))
+            y1 = int(y0 + 1000 * (a))
+            x2 = int(x0 - 1000 * (-b))
+            y2 = int(y0 - 1000 * (a))
+            self.linePoints.append([(x1, y1), (x2, y2)])
+
+    def compLine(self, line0, line1, horv):
+        """
+        line0, line1 の関係を返す
+        horv :  "h" or "v" を指定
+        """
+        if horv == 'h':
+            if max(line0[0][1], line0[1][1]) > max(line1[0][1], line1[1][1]):
+                return "upper"
+            else:
+                return "lower"
+        else:
+            if max(line0[0][0], line0[1][0]) > max(line1[0][0], line1[1][0]):
+                return "right"
+            else:
+                return "left"
+
+    def findCornerLine(self):
+        a = self.linePoints
+        vlines = [vline for vline in a if abs(vline[0][0] - vline[1][0]) < 50]
+        hlines = [hline for hline in a if abs(hline[0][1] - hline[1][1]) < 50]
+        upper_hline = hlines[0]
+        lower_hline = hlines[0]
+        for line in hlines:
+            if self.compLine(line, upper_hline, 'h') == "upper":
+                upper_hline = line
+
+            if self.compLine(line, lower_hline, 'h') == "lower":
+                lower_hline = line
+
+        right_vline = vlines[0]
+        left_vline = vlines[0]
+        for line in vlines:
+            if self.compLine(line, right_vline, 'v') == "right":
+                right_vline = line
+
+            if self.compLine(line, left_vline, 'v') == "left":
+                left_vline = line
+
+    def findCenterLine(self):
+        pass
+
+    def write_lines_to_file(self, outdir):
+        if not hasattr(self, 'lines'):
+            self.getHoughLines()
+        if not hasattr(self, 'linePoints'):
+            self.getLinePoints()
+        outfilename = self.mkFilename('_lines_data', outdir, ext='.txt')
+        with open(outfilename, 'w') as f:
+            f.write("stat\n")
+            f.write("len of lines[0] : " + str(len(self.lines[0])) + "\n")
+            f.write("lines\n")
+            f.write("[rho,  theta]\n")
+            for line in self.lines:
+                f.writelines(str(line))
+                f.write("\n")
+            f.write("\nlen of linePoints : "
+                    + str(len(self.linePoints)) + "\n")
+            f.write("linePoints\n")
+            f.write("[(x1,y1), (x2,y2)]\n")
+            for line in self.linePoints:
+                f.writelines(str(line))
+                f.write("\n")
+
+    def write_linesP_to_file(self, outdir):
+        if not hasattr(self, 'linesP'):
+            self.getHoughLinesP()
+        outfilename = self.mkFilename('_linesP_data', outdir, ext='.txt')
+        with open(outfilename, 'w') as f:
+            f.write("stat\n")
+            f.write("linesP\n")
+            f.write("len of linesP[0] : " + str(len(self.linesP[0])) + "\n")
+            f.write("\nlen of linesP: "
+                    + str(len(self.linesP)) + "\n")
+            f.write("[x1,y1,x2,y2]\n")
+            for line in self.linesP:
+                f.writelines(str(line))
+                f.write("\n")
 
     def writeContour(self):
         self.img_of_contours = np.zeros(self.img.shape, np.uint8)
         for point in self.contours:
             x, y = point[0][0]
             cv2.circle(self.img_of_contours, (x, y), 1, [0, 0, 255])
+
+    def write_gradients(self, outdir):
+        for n in ['sobel', 'scharr', 'laplacian']:
+            if n in self.parameters:
+                outfilename = self.mkFilename('_' + n, outdir)
+                img = getattr(self, 'gradients_' + n)
+                cv2.imwrite(outfilename, img)
+
+    def get_small_img_with_lines(self):
+        self.small_img_with_lines = self.small_img.copy()
+        self.getLinePoints()
+        for line in self.linePoints:
+            cv2.line(self.small_img_with_lines,
+                     line[0], line[1], (0, 0, 255), 2)
+
+    def get_small_img_with_linesP(self):
+        self.small_img_with_linesP = self.small_img.copy()
+        for line in self.linesP[0]:
+            pt1 = tuple(line[:2])
+            pt2 = tuple(line[-2:])
+            cv2.line(self.small_img_with_linesP,
+                     pt1, pt2, (0, 0, 255), 2)
+
+    def write_small_img(self, outdir):
+        outfilename = self.mkFilename('_small_img', outdir)
+        cv2.imwrite(outfilename, self.small_img)
+        outfilename = self.mkFilename('_small_img_gray', outdir)
+        cv2.imwrite(outfilename, self.small_img_gray)
+        outfilename = self.mkFilename('_small_img_canny', outdir)
+        cv2.imwrite(outfilename, self.small_img_canny)
+
+    def write_small_img_with_lines(self, outdir):
+        outfilename = self.mkFilename('_small_img_with_lines', outdir)
+        cv2.imwrite(outfilename, self.small_img_with_lines)
+
+    def write_small_img_with_linesP(self, outdir):
+        outfilename = self.mkFilename('_small_img_with_linesP', outdir)
+        cv2.imwrite(outfilename, self.small_img_with_linesP)
 
     def write_contours_bounding_rect_to_file(self, outdir=None):
         if not hasattr(self, 'contours'):
@@ -503,3 +690,71 @@ class KnPage:
             x, y, w, h = box
             cv2.rectangle(om, (x, y), (x + w, y + h), [0, 0, 255])
         self.write(self.mkFilename('_orig_w_collected_box', outdir), om)
+
+    def isVertical(self, line):
+        """
+         line = [[x1, y1],[x2, y2]]
+        """
+        return (line[0][0] == line[1][0])
+
+    def isHorizontal(self, line):
+        """
+         line = [[x1, y1],[x2, y2]]
+        """
+        return (line[0][1] == line[1][1])
+
+    def getIntersection(self, line1, line2):
+        """
+         Finds the intersection of two lines, or returns false.
+         line1 = [[x1, y1],[x2, y2]]
+         line2 = [[x1, y1],[x2, y2]]
+        """
+        s1 = np.array([float(x) for x in line1[0]])
+        e1 = np.array([float(x) for x in line1[1]])
+
+        s2 = np.array([float(x) for x in line2[0]])
+        e2 = np.array([float(x) for x in line2[1]])
+
+        if self.isVertical(line1):
+            if self.isVertical(line2):
+                return False
+            else:
+                a2 = (s2[1] - e2[1]) / (s2[0] - e2[0])
+                b2 = s2[1] - (a2 * s2[0])
+                x = line1[0][0]
+                y = a2 * x + b2
+
+        elif self.isVertical(line2):
+            a1 = (s1[1] - e1[1]) / (s1[0] - e1[0])
+            b1 = s1[1] - (a1 * s1[0])
+            x = line2[0][0]
+            y = a1 * x + b1
+
+        elif self.isHorizontal(line1):
+            if self.isHorizontal(line2):
+                return False
+            else:
+                a2 = (s2[1] - e2[1]) / (s2[0] - e2[0])
+                b2 = s2[1] - (a2 * s2[0])
+                y = line1[0][1]
+                x = (y - b2) / a2
+
+        elif self.isHorizontal(line2):
+            a1 = (s1[1] - e1[1]) / (s1[0] - e1[0])
+            b1 = s1[1] - (a1 * s1[0])
+            y = line1[1][1]
+            x = (y - b1) / a1
+
+        else:
+            a1 = (s1[1] - e1[1]) / (s1[0] - e1[0])
+            b1 = s1[1] - (a1 * s1[0])
+            a2 = (s2[1] - e2[1]) / (s2[0] - e2[0])
+            b2 = s2[1] - (a2 * s2[0])
+
+            if abs(a1 - a2) < sys.float_info.epsilon:
+                return False
+
+            x = (b2 - b1) / (a1 - a2)
+            y = a1 * x + b1
+
+        return (int(round(x)), int(round(y)))
