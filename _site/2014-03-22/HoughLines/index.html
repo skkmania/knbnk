@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<head>
+  <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+  <title>HoughLines</title>
+  <link rel="stylesheet" href="/assets/css/style.css" type="text/css">
+  <link rel="stylesheet" href="/assets/css/syntax.css" type="text/css">
+  <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+</head>
+<body>
+  <header>
+  <div>22 Mar 2014</div>
+  <h1>HoughLines</h1>
+</header>
+
+<div class='main'>
+  <p>HoughLinesの結果をparameterを変えて示す</p>
+
+<h2 id="sample">sample</h2>
+
+<p>これはあるコマの画像のオリジナル。 この画像から余分な余白を削除したい。</p>
+
+<p><img src="/images/Hough/007.jpeg" alt="007.jpeg" /></p>
+
+<p>しかしこのように大きいままだと計算負荷が大きい。 余白の境界を求めるだけなら縮小してもじゅうぶんに正確な結果が得られる。</p>
+
+<p><img src="/images/Hough/007_small.jpeg" alt="007_small.jpeg" /></p>
+
+<h1 id="houghlinesparameter">HoughLinesのparameter↲</h1>
+
+<h2 id="hough__rho_theta_minimumvote">“hough” : [rho, theta, minimumVote]</h2>
+
+<h3 id="rho__accuracy_of_rho_integer1_">rho : accuracy of rho. integerを指定。1 など。↲</h3>
+
+<h3 id="theta_accuracy_of_theta_int1__180">theta: accuracy of theta. int(1 - 180)を指定。↲</h3>
+
+<pre><code>           np.pi/180 などradianで考えるので、その分母を指定する。↲
+           180なら1度ずつ、2なら水平と垂直の直線のみを候補とするという意味↲</code></pre>
+
+<h3 id="minimumvote">minimumVote:↲</h3>
+
+<pre><code>       lineとみなすため必要な点の数。検出する線の長さに影響する。↲</code></pre>
+
+<h3 id="hough_rho__1_theta__pi180_minimumvote__100">Hough rho = 1, theta = PI/180, minimumVote = 100</h3>
+
+<p>thetaを大きくすると、さまざまな角度の線が検出される。</p>
+
+<p><img src="/images/Hough/hough_1_180_100_007_small_img_with_lines.jpeg" alt="hough_1_180_100_007" /></p>
+
+<h3 id="hough_rho__1_theta__pi2_minimumvote__100">Hough rho = 1, theta = PI/2, minimumVote = 100</h3>
+
+<p>thetaを2にすると、水平と垂直の線が検出される。 この例のように画像がほぼ水平にある場合はこの程度の値が最も有効だろう。</p>
+
+<p><img src="/images/Hough/hough_1_2_100_007_small_img_with_lines.jpeg" alt="hough_1_2_100_007" /></p>
+
+<p>thetaを2のままにしても、minimumVoteを大きくすると検出できる線が減り、余白をとらえ損なう。</p>
+
+<p><img src="/images/Hough/hough_1_2_150_007_small_img_with_lines.jpeg" alt="hough_1_2_150_007" /></p>
+
+<h3 id="hough_rho__1_theta__pi90_minimumvote__150">Hough rho = 1, theta = PI/90, minimumVote = 150</h3>
+
+<p>thetaを90にしても水平と垂直の線が検出される</p>
+
+<p><img src="/images/Hough/hough_1_90_150_007_small_img_with_lines.jpeg" alt="hough_1_90_150_007" /></p>
+
+<p>minimumVoteを大きくすると検出できる線が減り、余白をとらえ損なう。</p>
+
+<p><img src="/images/Hough/hough_1_90_200_007_small_img_with_lines.jpeg" alt="hough_1_90_200_007" /></p>
+</div>
+
+<footer>
+  <p>
+<a rel="license" href="http://creativecommons.org/licenses/by/4.0/"><img alt="クリエイティブ・コモンズ・ライセンス" style="border-width:0" src="http://i.creativecommons.org/l/by/4.0/80x15.png" /></a><a rel="license" href="http://creativecommons.org/licenses/by/4.0/">クリエイティブ・コモンズ 表示 4.0 国際 ライセンス</a>  skkmania 2014 
+          with help from <a href="http://jekyllbootstrap.com" target="_blank" title="The Definitive Jekyll Blogging Framework">Jekyll Bootstrap</a>
+  </p>
+</footer>
+
+  <p>- rendered with layout template -</p>
+</body>

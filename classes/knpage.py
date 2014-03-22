@@ -15,11 +15,21 @@
 #     "mode"         : findContoursのmode,      # EXTERNAL, LIST, CCOMP, TREE
 #     "method"       : findContoursのmethod,    # NONE, SIMPLE, L1, KCOS
 
-#   以下の3つは排他。どれかひとつを指定。配列内の意味はopencvのdocを参照のこと
+#   HoughLinesのparameter
+#     "hough"        : [rho, theta, minimumVote]
+#          rho : accuracy of rho.  integerを指定。1 など。
+#          theta:  accuracy of theta. int(1 - 180)を指定。
+#                  np.pi/180 などradianで考えるので、その分母を指定する。
+#                  180なら1度ずつ、2なら水平と垂直の直線のみを候補とするという意味
+#          minimumVote:
+#          lineとみなすため必要な点の数。検出する線の長さに影響する。
+
+#   以下の4つは排他。どれかひとつを指定。配列内の意味はopencvのdocを参照のこと
 #     2値化のやりかたを決める重要な設定項目。
-#     "canny"        : [threshold1, threshold2],
+#     "canny"        : [threshold1, threshold2, apertureSize],
 #     "threshold"    : [thresh, maxval, type],
 #     "adaptive"     : [maxval, method, type, blockSize, C]
+#     "harris"       : [blockSize, ksize, k]
 
 #   以下の3つはgradientsのparameter。配列内の意味はopencvのdocを参照のこと
 #     本プロジェクトには意味がない。
@@ -214,8 +224,8 @@ class KnPage:
             ret, self.binarized =\
                 cv2.threshold(self.gray, thresh_low, thresh_high, typeval)
         elif 'canny' in self.parameters:
-            minval, maxval = self.parameters['canny']
-            self.binarized = cv2.Canny(self.gray, minval, maxval)
+            minval, maxval, apertureSize = self.parameters['canny']
+            self.binarized = cv2.Canny(self.gray, minval, maxval, apertureSize)
         elif 'adaptive' in self.parameters:
             self.binarized =\
                 cv2.adaptiveThreshold(self.gray,
@@ -251,24 +261,34 @@ class KnPage:
         else:
             raise KnPageParamsException('scale_size must be in param file')
 
-    def getHoughLines(self):
+        if 'hough' in self.parameters:
+            rho, theta, minimumVote = self.parameters['hough']
+            theta = np.pi / theta
+        else:
+            rho, theta, minimumVote = [1, np.pi / 180, 120]
+
+        if 'canny' in self.parameters:
+            minval, maxval, apertureSize = self.parameters['canny']
+        else:
+            minval, maxval, apertureSize = [50, 200, 3]
+
         self.small_img = cv2.resize(self.img,
                                     (int(self.width * self.scale),
                                      int(self.height * self.scale)))
         self.small_img_gray = cv2.cvtColor(self.small_img, cv2.COLOR_BGR2GRAY)
         self.small_img_canny = cv2.Canny(self.small_img_gray,
-                                         50, 200, apertureSize=3)
-        self.lines = cv2.HoughLines(self.small_img_canny, 1, np.pi / 180, 120)
+                                         minval, maxval, apertureSize)
+        self.rho = rho
+        self.theta = theta
+        self.minimumVote = minimumVote
+
+    def getHoughLines(self):
+        self.lines = cv2.HoughLines(self.small_img_canny,
+                                    self.rho, self.theta, self.minimumVote)
 
     def getHoughLinesP(self):
-        self.small_img = cv2.resize(self.img,
-                                    (int(self.width * self.scale),
-                                     int(self.height * self.scale)))
-        self.small_img_gray = cv2.cvtColor(self.small_img, cv2.COLOR_BGR2GRAY)
-        self.small_img_canny = cv2.Canny(self.small_img_gray,
-                                         50, 200, apertureSize=3)
         self.linesP = cv2.HoughLinesP(self.small_img_canny,
-                                      1, np.pi / 180, 120)
+                                      self.rho, self.theta, self.minimumVote)
 
     def getLinePoints(self):
         """
