@@ -3,13 +3,27 @@ import pytest
 import os.path
 import json
 import shutil
+import itertools
+from pprint import pprint
 
 from classes.knpage import KnPage
 from classes.knpage import KnPageException
 from classes.knpage import KnPageParamsException
 
 HOME_DIR = '/home/skkmania'
-DATA_DIR = HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data/1123003'
+#DATA_DIR = HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data/1123003'
+#DATA_DIR = HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data/1080614'
+DATA_DIR = HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data/1142178'
+SRC_SAMPLE = {
+            "scale_size": [640.0, 480.0, 320.0],
+            "boundingRect": [[16, 32]],
+            "imgfname": [DATA_DIR + '/007.jpeg', DATA_DIR + '/008.jpeg'],
+            "mode": ["EXTERNAL"],
+            "canny": [[50, 200, 3]],
+            "hough": [[1, 180, 200]],
+            "method": ["NONE"],
+            "outdir": [DATA_DIR]
+        }
 
 opts_template = {
         "scale_size": 640.0,
@@ -23,6 +37,54 @@ opts_template = {
         "method": "NONE",
         "outdir": DATA_DIR
 }
+
+def mkoutfilename(params, fix):
+    res = 'o_' + os.path.basename(params['imgfname']).split('.')[0]
+    keys = params.keys()
+    if 'scale_size' in keys:
+        res += "_ss_" + str(int(params['scale_size']))
+
+    if 'hough' in keys:
+        res += "_hgh_" + "_".join(map(str, params['hough']))
+
+    if 'canny' in keys:
+        res += "_can_" + "_".join(map(str, params['canny']))
+
+    return res + fix
+
+def params_generator(source):
+    keys = source.keys()
+    vals_products = map(list, itertools.product(*source.values()))
+    todict = lambda a,b:dict(zip(a,b))
+    metadict = lambda a: (lambda b: todict(a,b))
+    temp = map(metadict(keys), vals_products)
+    cnt = 0
+    for params in temp:
+        params["outfilename"] = mkoutfilename(params, '_' + str(cnt))
+        cnt += 1
+        params["paramfname"] = params['outdir'] + '/' + params['outfilename'] + '.json'
+    return temp
+
+def print_params_files(params_list):
+    ret = []
+    for params in params_list:
+        fname = params['paramfname']
+        with open(fname, 'w') as f:
+            json.dump(params, f, sort_keys=False, indent=4)
+            ret.append(fname)
+    return ret
+
+class TestParamsGenerator:
+    def test_params_generator(self, tmpdir):
+        src = SRC_SAMPLE
+        result = params_generator(src)
+        wrap = lambda d: d.get("scale_size")
+        assert set(map(wrap, result)) == set(src["scale_size"])
+        dataDirectory = tmpdir.mkdir('data')
+        sampleFile = dataDirectory.join("result.txt")
+        with open(str(sampleFile), 'w') as f:
+            f.write(str(result))
+        print_params_files(result)
 
 def generate_opts(opts_list, kvs_list, data_dir=DATA_DIR):
     """
@@ -206,6 +268,29 @@ class TestGetHoughLinesWithManyPatterns:
         kn.get_small_img_with_lines()
         kn.write_small_img_with_lines(DATA_DIR)
         assert kn.small_img_with_lines is not None
+
+
+class TestGetHoughLinesWithParamGenerator:
+    def test_get_houghlines_with_param_generator(self):
+        src = {
+            "scale_size": [480.0, 320.0],
+            "boundingRect": [[16, 32]],
+            "imgfname": map(lambda x: DATA_DIR + '/' + ('%03d' % x) + '.jpeg', range(11,21)),
+            "mode": ["EXTERNAL"],
+            "canny": [[50, 150, 3], [50, 100, 3]],
+            "hough": [[1, 2, 80], [1, 90, 80], [1, 180, 150]],
+            "method": ["NONE"],
+            "outdir": [DATA_DIR]
+        }
+        result = params_generator(src)
+        files = print_params_files(result)
+        for params_fname in files:
+            kn = KnPage(params=params_fname)
+            kn.prepareForLines()
+            kn.getHoughLines()
+            kn.get_small_img_with_lines()
+            kn.write_small_img_with_lines(DATA_DIR)
+            assert kn.small_img_with_lines is not None
 
 
 class TestSmallImageP:

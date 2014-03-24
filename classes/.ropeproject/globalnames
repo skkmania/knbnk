@@ -5,6 +5,7 @@ TestParamsqeUtest.test_knpage]qU
 TestKnPageqaUknpage]q(UKnPageExceptionq UKnPageq!UKnPageParamsExceptionq"eUtest.test_knpage_util]q#(UDATA_DIRq$Upytest_funcarg__kn2q%Ubox15q&Ubox14q'Ubox16q(Ubox11q)Ubox13q*Ubox12q+UHOME_DIRq,UTestCompLineq-UTestInterSectionq.U
 TestTmpDirq/Ubox06q0Upytest_funcarg__knq1Ubox04q2Ubox05q3Ubox02q4Ubox03q5Ubox01q6eUtest.test_knpage_basic]q7(UDATA_DIRq8Upytest_funcarg__kn2q9UTestManipulateBoxesq:UTestFileNameq;UTestNewq<Ubox15q=Ubox14q>Ubox16q?Ubox11q@Ubox13qAUbox12qBUtest_functionqCUHOME_DIRqDUTestBoundingRectqEU
 TestTmpDirqFU
-TestParamsqGUTestGradientsqHUpytest_funcarg__myfuncargqIUbox06qJUpytest_funcarg__knqKUbox04qLUbox05qMUbox02qNUbox03qOUbox01qPeUtest.test_knpage_split]qQ(UDATA_DIRqRUTestGetHoughLinesqSUTestWriteSmallImageqTUTestGetHoughLinesPqUUpytest_funcarg__kn2qVU!TestGetHoughLinesWithManyPatternsqWUopts_templateqXUTestGenerateOptsqYUHOME_DIRqZUTestFileNameq[UTestSmallImageq\UTestBoundingRectq]Ugenerate_optsq^UTestSmallImagePq_U
-TestTmpDirq`Uedit_parms_fileqaUpytest_funcarg__knqbU
-TestParamsqceu.
+TestParamsqGUTestGradientsqHUpytest_funcarg__myfuncargqIUbox06qJUpytest_funcarg__knqKUbox04qLUbox05qMUbox02qNUbox03qOUbox01qPeUtest.test_knpage_split]qQ(UDATA_DIRqRUTestGetHoughLinesqSUmkoutfilenameqTUTestWriteSmallImageqUUTestGetHoughLinesPqVUTestParamsGeneratorqWUparams_generatorqXU!TestGetHoughLinesWithManyPatternsqYUopts_templateqZUpytest_funcarg__kn2q[UTestGenerateOptsq\UHOME_DIRq]UTestFileNameq^UTestSmallImageq_UTestBoundingRectq`Ugenerate_optsqaUTestSmallImagePqbU
+SRC_SAMPLEqcU
+TestTmpDirqdUedit_parms_fileqeU#TestGetHoughLinesWithParamGeneratorqfUpytest_funcarg__knqgU
+TestParamsqhUprint_params_filesqieu.
