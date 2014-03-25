@@ -218,6 +218,21 @@ class TestGetHoughLines:
         assert len(kn.lines) > 0
 
 
+class TestSelectLine:
+    def test_selectLine(self, knManyLines):
+        knManyLines.prepareForLines()
+        knManyLines.getHoughLines()
+        result = knManyLines.enoughLines()
+        assert result is True
+
+
+class TestDivide:
+    def test_divide(self, knManyLines):
+        knManyLines.divide()
+        assert knManyLines.leftPage is not None
+        assert knManyLines.rightPage is not None
+
+
 class TestEnoughLines:
     def test_makeCandidates(self, knManyLines):
         knManyLines.prepareForLines()
@@ -246,22 +261,23 @@ class TestEnoughLines:
 
 
 class TestFindCornerLines:
-    def test_linesInZone(self, knManyLines):
-        knManyLines.prepareForLines()
-        knManyLines.getHoughLines()
-        knManyLines.enoughLines()
-        assert len(knManyLines.horizLines) > 0
-        assert len(knManyLines.vertLines) > 0
-        for d in ['upper', 'lower', 'center', 'left', 'right']:
-            result = knManyLines.linesInZone(d)
-            assert len(result) > 0
+#    def test_linesInZone(self, knManyLines):
+#        knManyLines.prepareForLines()
+#        knManyLines.getHoughLines()
+#        knManyLines.enoughLines()
+#        assert len(knManyLines.horizLines) > 0
+#        assert len(knManyLines.vertLines) > 0
+#        for d in ['upper', 'lower', 'center', 'left', 'right']:
+#            result = knManyLines.linesInZone(d)
+#            assert len(result) > 0
 
     def test_findCornerLines(self, knManyLines):
         knManyLines.prepareForLines()
         knManyLines.getHoughLines()
         knManyLines.enoughLines()
         knManyLines.findCornerLines()
-        assert len(knManyLines.candidates) == 5
+        assert len(knManyLines.cornerLines) == 5
+        print str(knManyLines.cornerLines)
 
 class TestWriteSmallImage:
     def test_write_small_img(self):

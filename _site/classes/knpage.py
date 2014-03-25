@@ -145,8 +145,23 @@ class KnPage:
             raise KnPageException('%s not found' % self.imgfname)
 
     def divide(self):
-        self.left = None
-        self.right = None
+        self.prepareForLines()
+        self.getHoughLines()
+        if self.enoughLines():
+            self.findCornerLines()
+            # self.verifyCornerLines()
+        else:
+            raise
+        self.originalCorner = {}
+        for d in ['upper', 'lower', 'center', 'right', 'left']:
+            self.originalCorner[d] = int(self.cornerLines[d][0] / self.scale)
+
+        oc = self.originalCorner
+        self.leftPage = self.img[oc['upper']:oc['lower'], oc['left']:oc['center']]
+        self.rightPage = self.img[oc['upper']:oc['lower'], oc['center']:oc['right']]
+
+        self.write(self.mkFilename(fix='_left', ext='.jpeg'), self.leftPage)
+        self.write(self.mkFilename(fix='_right', ext='.jpeg'), self.rightPage)
 
     def write(self, outfilename=None, om=None):
         if om is None:
@@ -418,29 +433,30 @@ class KnPage:
             elif way == 'max':
                 return lines[-1]
 
-    def linesInZone(self, direction):
-        if direction in ['upper', 'lower']:
-            return [line for line
-                          in self.horizLines
-                             if self.small_zone[direction][0]
-                                 < line[0] <
-                                self.small_zone[direction][1]
-                   ]
-        else:
-            return [line for line in self.vertLines\
-                        if self.small_zone[direction][0] < line[0] <\
-                           self.small_zone[direction][1]]
+#    def linesInZone(self, direction):
+#        if direction in ['upper', 'lower']:
+#            return [line for line
+#                          in self.horizLines
+#                             if self.small_zone[direction][0]
+#                                 < line[0] <
+#                                self.small_zone[direction][1]
+#                   ]
+#        else:
+#            return [line for line in self.vertLines\
+#                        if self.small_zone[direction][0] < line[0] <\
+#                           self.small_zone[direction][1]]
 
     def findCornerLines(self):
+        self.cornerLines = {}
         for (d, w) in [('upper', 'min'), ('lower', 'max'), ('center', 'center'),
                        ('left', 'min'), ('right', 'max')]:
-            lines = self.linesInZone(d)
+            lines = self.candidates[d]
             if len(lines) == 0:
                 raise
             elif len(lines) == 1:
-                self.candidates[d] = lines[0]
+                self.cornerLines[d] = lines[0]
             else:
-                self.candidates[d] = self.selectLine(w, lines)
+                self.cornerLines[d] = self.selectLine(w, lines)
 
     def findCornerLineP(self):
         a = self.linePoints
