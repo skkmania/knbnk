@@ -138,6 +138,7 @@ class KnPage:
                 self.height, self.width, self.depth = self.img.shape
                 self.centroids = []
                 self.boxes = []
+                self.candidates = {'upper':[], 'lower':[], 'center':[], 'left':[], 'right':[]}
                 self.gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
                 self.getBinarized()
         else:
@@ -287,9 +288,14 @@ class KnPage:
         """
         戻り値: self.lines lineの配列
             この要素のlineは、(rho, theta). 2次元Hough space上の1点を指す
+            OpenCVの戻り値は[[[0,1],[0,2],...,[]]]と外側に配列があるが、この関数の戻り値はそれをひとつ外して
+            lineの配列としていることに注意。
+            また、後々の処理の便宜のため、numpyのarrayからpythonのlistに変換し、
+            theta, rhoの順に2段のkeyにもとづきsortしておく。
         """
         self.lines = cv2.HoughLines(self.small_img_canny,
-                                    self.rho, self.theta, self.minimumVote)
+                                    self.rho, self.theta, self.minimumVote)[0].tolist()
+        self.lines.sort(key=lambda x: (x[1], x[0]))
 
     def getHoughLinesP(self):
         self.linesP = cv2.HoughLinesP(self.small_img_canny,
@@ -304,7 +310,7 @@ class KnPage:
         に変換する
         """
         self.linePoints = []
-        for rho, theta in self.lines[0]:
+        for rho, theta in self.lines:
             a = np.cos(theta)
             b = np.sin(theta)
             x0 = a * rho
@@ -342,6 +348,21 @@ class KnPage:
         self.horizLines = filter(self.isHorizontal, self.lines)
         self.vertLines = filter(self.isVertical, self.lines)
 
+    def makeCandidates(self, umpire=None):
+        if umpire is not None:
+            pass
+        else:
+            for direction in ['upper', 'lower']:
+                for line in self.horizLines:
+                    if self.small_zone[direction][0] < line[0] <\
+                            self.small_zone[direction][1]:
+                        self.candidates[direction].append(line)
+            for direction in ['center', 'right', 'left']:
+                for line in self.vertLines:
+                    if self.small_zone[direction][0] < line[0] <\
+                            self.small_zone[direction][1]:
+                        self.candidates[direction].append(line)
+
     def lineSeemsToExist(self, direction, umpire=None):
         if umpire is not None:
             pass
@@ -350,13 +371,13 @@ class KnPage:
                 for line in self.horizLines:
                     if self.small_zone[direction][0] < line[0] <\
                             self.small_zone[direction][1]:
-                        return True
+                        self.candidates[direction].append(line)
             else:
                 for line in self.vertLines:
                     if self.small_zone[direction][0] < line[0] <\
                             self.small_zone[direction][1]:
-                        return True
-        return False
+                        self.candidates[direction].append(line)
+        return len(self.candidates[direction]) > 0
 
     def makeSmallZone(self, levels=None):
         if levels is None:
@@ -372,7 +393,7 @@ class KnPage:
             self.small_zone[d] = [self.small_width * x for x in levels[d]]
 
     def enoughLines(self):
-        if len(self.lines[0]) < 5:
+        if len(self.lines) < 5:
             return False
         else:
             self.partitionLines()
@@ -380,12 +401,48 @@ class KnPage:
                 return False
             else:
                 self.makeSmallZone()
-                for direction in ['upper', 'lower', 'center', 'righ', 'left']:
+                # self.makeCandidates()  # for debug
+                for direction in ['upper', 'lower', 'center', 'right', 'left']:
                     if not self.lineSeemsToExist(direction):
                         return False
         return True
 
-    def findCornerLine(self):
+    def selectLine(self, way, lines):
+        if way == 'center':
+            lines.sort(key=lambda x: abs((self.small_width / 2) - x[0]))
+            return lines[0]
+        else:
+            lines.sort(key=lambda x: x[0])
+            if way == 'min':
+                return lines[0]
+            elif way == 'max':
+                return lines[-1]
+
+    def linesInZone(self, direction):
+        if direction in ['upper', 'lower']:
+            return [line for line
+                          in self.horizLines
+                             if self.small_zone[direction][0]
+                                 < line[0] <
+                                self.small_zone[direction][1]
+                   ]
+        else:
+            return [line for line in self.vertLines\
+                        if self.small_zone[direction][0] < line[0] <\
+                           self.small_zone[direction][1]]
+
+    def findCornerLines(self):
+        for (d, w) in [('upper', 'min'), ('lower', 'max'), ('center', 'center'),
+                       ('left', 'min'), ('right', 'max')]:
+            lines = self.linesInZone(d)
+            if len(lines) == 0:
+                raise
+            elif len(lines) == 1:
+                self.candidates[d] = lines[0]
+            else:
+                self.candidates[d] = self.selectLine(w, lines)
+
+    def findCornerLineP(self):
         a = self.linePoints
         vlines = [vline for vline in a if abs(vline[0][0] - vline[1][0]) < 50]
         hlines = [hline for hline in a if abs(hline[0][1] - hline[1][1]) < 50]
@@ -407,7 +464,7 @@ class KnPage:
             if self.compLine(line, left_vline, 'v') == "left":
                 left_vline = line
 
-    def findCenterLine(self):
+    def findCenterLineP(self):
         pass
 
     def write_lines_to_file(self, outdir):
@@ -418,7 +475,7 @@ class KnPage:
         outfilename = self.mkFilename('_lines_data', outdir, ext='.txt')
         with open(outfilename, 'w') as f:
             f.write("stat\n")
-            f.write("len of lines[0] : " + str(len(self.lines[0])) + "\n")
+            f.write("len of lines : " + str(len(self.lines)) + "\n")
             f.write("lines\n")
             f.write("[rho,  theta]\n")
             for line in self.lines:
@@ -776,10 +833,10 @@ class KnPage:
          line = (rho, theta)
          を判別して対応
         """
-        if isinstance(line[0], float):
-            return abs(line[1] - np.pi / 2) < 0.01
-        else:
+        if isinstance(line[0], list) or isinstance(line[0], tuple):
             return (line[0][0] == line[1][0])
+        else:
+            return line[1] < 0.01
 
     def isHorizontal(self, line):
         """
@@ -787,10 +844,10 @@ class KnPage:
          line = (rho, theta)
          を判別して対応
         """
-        if isinstance(line[0], float):
-            return line[1] < 0.01
-        else:
+        if isinstance(line[0], list) or isinstance(line[0], tuple):
             return (line[0][1] == line[1][1])
+        else:
+            return abs(line[1] - np.pi / 2) < 0.01
 
     def getIntersection(self, line1, line2):
         """

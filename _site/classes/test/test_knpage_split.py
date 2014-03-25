@@ -177,6 +177,20 @@ def pytest_funcarg__kn2(request):
     params_file_name = DATA_DIR + '/twletters_01.json'
     return KnPage(fname, params=params_file_name)
 
+def pytest_funcarg__knManyLines(request):
+    DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data/1142178'
+    img_fname = DATA_DIR + '/007.jpeg'
+    params_fname = DATA_DIR + '/o_011_ss_320_hgh_1_2_80_can_50_150_3_60.json'
+    kn = KnPage(fname=img_fname, datadir=DATA_DIR, params=params_fname)
+    return kn
+
+def pytest_funcarg__knFewLines(request):
+    DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data/1123003'
+    img_fname = DATA_DIR + '/006.jpeg'
+    params_fname = DATA_DIR + '/hough_1_180_200.json'
+    kn = KnPage(fname=img_fname, datadir=DATA_DIR, params=params_fname)
+    return kn
+
 
 class TestGetHoughLinesP:
     def test_getHoughLinesP(self, kn):
@@ -205,19 +219,11 @@ class TestGetHoughLines:
 
 
 class TestEnoughLines:
-    def pytest_funcarg__knManyLines(request):
-        DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data/1123003'
-        img_fname = DATA_DIR + '/006.jpeg'
-        params_fname = DATA_DIR + '/hough_1_2_100.json'
-        kn = KnPage(fname=img_fname, datadir=DATA_DIR, params=params_fname)
-        return kn
-
-    def pytest_funcarg__knFewLines(request):
-        DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data/1123003'
-        img_fname = DATA_DIR + '/006.jpeg'
-        params_fname = DATA_DIR + '/hough_1_180_200.json'
-        kn = KnPage(fname=img_fname, datadir=DATA_DIR, params=params_fname)
-        return kn
+    def test_makeCandidates(self, knManyLines):
+        knManyLines.prepareForLines()
+        knManyLines.getHoughLines()
+        result = knManyLines.enoughLines()
+        assert result is True
 
     def test_enoughLines(self, knManyLines):
         knManyLines.prepareForLines()
@@ -225,7 +231,7 @@ class TestEnoughLines:
         result = knManyLines.enoughLines()
         assert result is True
 
-    def test_enoughLines(self, knFewLines):
+    def test_enoughLines2(self, knFewLines):
         knFewLines.prepareForLines()
         knFewLines.getHoughLines()
         result = knFewLines.enoughLines()
@@ -238,6 +244,24 @@ class TestEnoughLines:
         assert kn.horizLines is not None
         assert kn.vertLines is not None
 
+
+class TestFindCornerLines:
+    def test_linesInZone(self, knManyLines):
+        knManyLines.prepareForLines()
+        knManyLines.getHoughLines()
+        knManyLines.enoughLines()
+        assert len(knManyLines.horizLines) > 0
+        assert len(knManyLines.vertLines) > 0
+        for d in ['upper', 'lower', 'center', 'left', 'right']:
+            result = knManyLines.linesInZone(d)
+            assert len(result) > 0
+
+    def test_findCornerLines(self, knManyLines):
+        knManyLines.prepareForLines()
+        knManyLines.getHoughLines()
+        knManyLines.enoughLines()
+        knManyLines.findCornerLines()
+        assert len(knManyLines.candidates) == 5
 
 class TestWriteSmallImage:
     def test_write_small_img(self):
