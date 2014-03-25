@@ -165,9 +165,9 @@ def edit_parms_file(pfbody=None, imfname=None, opts=None):
 
 
 def pytest_funcarg__kn(request):
-    #img_fname = '/home/skkmania/workspace/pysrc/knbnk/data/1123003/007.jpeg'
+    DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data/1123003'
     img_fname = DATA_DIR + '/007.jpeg'
-    params_fname = DATA_DIR + '/005_split_01.json'
+    params_fname = DATA_DIR + '/hough_1_2_100.json'
     kn = KnPage(fname=img_fname, datadir=DATA_DIR, params=params_fname)
     return kn
 
@@ -202,6 +202,41 @@ class TestGetHoughLines:
         kn.getHoughLines()
         kn.write_lines_to_file(DATA_DIR)
         assert len(kn.lines) > 0
+
+
+class TestEnoughLines:
+    def pytest_funcarg__knManyLines(request):
+        DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data/1123003'
+        img_fname = DATA_DIR + '/006.jpeg'
+        params_fname = DATA_DIR + '/hough_1_2_100.json'
+        kn = KnPage(fname=img_fname, datadir=DATA_DIR, params=params_fname)
+        return kn
+
+    def pytest_funcarg__knFewLines(request):
+        DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data/1123003'
+        img_fname = DATA_DIR + '/006.jpeg'
+        params_fname = DATA_DIR + '/hough_1_180_200.json'
+        kn = KnPage(fname=img_fname, datadir=DATA_DIR, params=params_fname)
+        return kn
+
+    def test_enoughLines(self, knManyLines):
+        knManyLines.prepareForLines()
+        knManyLines.getHoughLines()
+        result = knManyLines.enoughLines()
+        assert result is True
+
+    def test_enoughLines(self, knFewLines):
+        knFewLines.prepareForLines()
+        knFewLines.getHoughLines()
+        result = knFewLines.enoughLines()
+        assert result is False
+
+    def test_partitionLines(self, kn):
+        kn.prepareForLines()
+        kn.getHoughLines()
+        kn.partitionLines()
+        assert kn.horizLines is not None
+        assert kn.vertLines is not None
 
 
 class TestWriteSmallImage:

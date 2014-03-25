@@ -275,6 +275,7 @@ class KnPage:
         self.small_img = cv2.resize(self.img,
                                     (int(self.width * self.scale),
                                      int(self.height * self.scale)))
+        self.small_height, self.small_width, self.small_depth = self.small_img.shape
         self.small_img_gray = cv2.cvtColor(self.small_img, cv2.COLOR_BGR2GRAY)
         self.small_img_canny = cv2.Canny(self.small_img_gray,
                                          minval, maxval, apertureSize)
@@ -283,6 +284,10 @@ class KnPage:
         self.minimumVote = minimumVote
 
     def getHoughLines(self):
+        """
+        戻り値: self.lines lineの配列
+            この要素のlineは、(rho, theta). 2次元Hough space上の1点を指す
+        """
         self.lines = cv2.HoughLines(self.small_img_canny,
                                     self.rho, self.theta, self.minimumVote)
 
@@ -312,6 +317,7 @@ class KnPage:
 
     def compLine(self, line0, line1, horv):
         """
+        line0, line1 の形式は2点指定式。[(x0,y0), (x1,y1)]
         line0, line1 の関係を返す
         horv :  "h" or "v" を指定
         """
@@ -331,6 +337,53 @@ class KnPage:
                     return "left"
             else:
                 raise KnPageException('wrong recognition of line')
+
+    def partitionLines(self):
+        self.horizLines = filter(self.isHorizontal, self.lines)
+        self.vertLines = filter(self.isVertical, self.lines)
+
+    def lineSeemsToExist(self, direction, umpire=None):
+        if umpire is not None:
+            pass
+        else:
+            if direction in ['upper', 'lower']:
+                for line in self.horizLines:
+                    if self.small_zone[direction][0] < line[0] <\
+                            self.small_zone[direction][1]:
+                        return True
+            else:
+                for line in self.vertLines:
+                    if self.small_zone[direction][0] < line[0] <\
+                            self.small_zone[direction][1]:
+                        return True
+        return False
+
+    def makeSmallZone(self, levels=None):
+        if levels is None:
+            levels = { 'upper' : [0.03, 0.25],
+                       'lower' : [0.75, 0.97],
+                       'center': [0.45, 0.55],
+                       'left'  : [0.03, 0.25],
+                       'right' : [0.75, 0.97] }
+        self.small_zone = {}
+        for d in ['upper', 'lower']:
+            self.small_zone[d] = [self.small_height * x for x in levels[d]]
+        for d in ['center', 'left', 'right']:
+            self.small_zone[d] = [self.small_width * x for x in levels[d]]
+
+    def enoughLines(self):
+        if len(self.lines[0]) < 5:
+            return False
+        else:
+            self.partitionLines()
+            if len(self.horizLines) < 2 or len(self.vertLines) < 3:
+                return False
+            else:
+                self.makeSmallZone()
+                for direction in ['upper', 'lower', 'center', 'righ', 'left']:
+                    if not self.lineSeemsToExist(direction):
+                        return False
+        return True
 
     def findCornerLine(self):
         a = self.linePoints
@@ -720,14 +773,24 @@ class KnPage:
     def isVertical(self, line):
         """
          line = [[x1, y1],[x2, y2]]
+         line = (rho, theta)
+         を判別して対応
         """
-        return (line[0][0] == line[1][0])
+        if isinstance(line[0], float):
+            return abs(line[1] - np.pi / 2) < 0.01
+        else:
+            return (line[0][0] == line[1][0])
 
     def isHorizontal(self, line):
         """
          line = [[x1, y1],[x2, y2]]
+         line = (rho, theta)
+         を判別して対応
         """
-        return (line[0][1] == line[1][1])
+        if isinstance(line[0], float):
+            return line[1] < 0.01
+        else:
+            return (line[0][1] == line[1][1])
 
     def getIntersection(self, line1, line2):
         """
