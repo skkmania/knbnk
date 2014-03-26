@@ -73,7 +73,7 @@ import os.path
 #from operator import itemgetter, attrgetter
 
 
-class KnPageException(Exception):
+class KnKomaException(Exception):
     def __init__(self, value):
         if value is None:
             self.initException()
@@ -84,7 +84,7 @@ class KnPageException(Exception):
         return repr(self.value)
 
     def printException(self):
-        print "KnPage Exception."
+        print "KnKoma Exception."
 
     @classmethod
     def paramsFileNotFound(self, value):
@@ -95,7 +95,7 @@ class KnPageException(Exception):
         print "parameter file name must be specified."
 
 
-class KnPageParamsException(Exception):
+class KnKomaParamsException(Exception):
     def __init__(self, value):
         self.value = value
 
@@ -103,18 +103,18 @@ class KnPageParamsException(Exception):
         return repr(self.value)
 
 
-class KnPage:
+class KnKoma:
 
     def __init__(self, fname=None, datadir=None, params=None, outdir=None):
         if params is None:
-            raise KnPageException('params is None')
+            raise KnKomaException('params is None')
 
         if os.path.exists(params):
             self.read_params(params)
             self.get_img()
         else:
-            raise KnPageParamsException(params)
-            # raise KnPageException.paramsFileNotFound(params)
+            raise KnKomaParamsException(params)
+            # raise KnKomaException.paramsFileNotFound(params)
 
     def read_params(self, params):
         with open(params) as f:
@@ -127,14 +127,14 @@ class KnPage:
         except KeyError as e:
             msg = 'key : %s must be in parameter file' % str(e)
             print msg
-            raise KnPageParamsException(msg)
+            raise KnKomaParamsException(msg)
         self.outfilename = self.parameters['outfilename']
 
     def get_img(self):
         if os.path.exists(self.imgfname):
             self.img = cv2.imread(self.imgfname)
             if self.img is None:
-                raise KnPageException(self.imgfname + 'cannot be read')
+                raise KnKomaException(self.imgfname + 'cannot be read')
             else:
                 self.height, self.width, self.depth = self.img.shape
                 self.centroids = []
@@ -144,7 +144,7 @@ class KnPage:
                 self.gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
                 self.getBinarized()
         else:
-            raise KnPageException('%s not found' % self.imgfname)
+            raise KnKomaException('%s not found' % self.imgfname)
 
     def divide(self):
         self.prepareForLines()
@@ -278,7 +278,7 @@ class KnPage:
             self.scale_size = self.parameters['scale_size']
             self.scale = self.scale_size / self.width
         else:
-            raise KnPageParamsException('scale_size must be in param file')
+            raise KnKomaParamsException('scale_size must be in param file')
 
         if 'hough' in self.parameters:
             rho, theta, minimumVote = self.parameters['hough']
@@ -353,7 +353,7 @@ class KnPage:
                 else:
                     return "lower"
             else:
-                raise KnPageException('wrong recognition of line')
+                raise KnKomaException('wrong recognition of line')
         else:
             if self.isVertical(line0) and self.isVertical(line1):
                 if max(line0[0][0], line0[1][0]) > max(line1[0][0], line1[1][0]):
@@ -361,7 +361,7 @@ class KnPage:
                 else:
                     return "left"
             else:
-                raise KnPageException('wrong recognition of line')
+                raise KnKomaException('wrong recognition of line')
 
     def partitionLines(self):
         self.horizLines = filter(self.isHorizontal, self.lines)

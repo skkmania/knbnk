@@ -714,9 +714,11 @@ class KnPage:
         return False
 
     def get_boundingBox(self, boxes):
-        # 入力のboxの形式は(x,y,w,h)
-        # 出力のboxの形式も(x,y,w,h)
-        # (x,y,w,h) -> (x,y,x+w,y+h)
+        """
+        入力のboxの形式は(x,y,w,h)
+        出力のboxの形式も(x,y,w,h)
+        (x,y,w,h) -> (x,y,x+w,y+h)
+        """
         target = [(x, y, x + w, y + h) for (x, y, w, h) in boxes]
         x1, y1, d1, d2 = map(min, zip(*target))
         d1, d2, x2, y2 = map(max, zip(*target))
@@ -724,7 +726,9 @@ class KnPage:
         return (x1, y1, x2 - x1, y2 - y1)
 
     def sweep_included_boxes(self, boxes=None):
-        # 他のboxに完全に包含されるboxをリストから排除する
+        """
+        他のboxに完全に包含されるboxをリストから排除する
+        """
         flag = False
         if boxes is None:
             self.getContours()
@@ -733,7 +737,7 @@ class KnPage:
             boxes = self.boxes
             flag = True
 
-      # w, h どちらかが200以上のboxは排除
+        # w, h どちらかが200以上のboxは排除
         boxes = [x for x in boxes if (x[2] < 200) and (x[3] < 200)]
 
         temp_boxes = []
@@ -760,6 +764,17 @@ class KnPage:
         return wrapper
 
     def get_adj_boxes(self, boxes, abox):
+        """
+        隣接するboxのリストを返す
+        入力：
+        boxes : boxのリスト。探索対象。
+        abox : あるbox。探索の起点。このboxに隣接するboxからなるリストを返す。
+        ここで隣接するとは、直接aboxに隣接するもの,
+                            間接的にaboxに隣接するもの(隣の隣もそのまた隣もみな隣とみなす。)
+        をどちらも含める。
+        それゆえ、linked listを再帰でたどるのと同様に、この関数も再帰を利用している。
+        出力: boxのリスト
+        """
         if abox in boxes:
             boxes.remove(abox)
 
