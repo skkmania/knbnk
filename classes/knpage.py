@@ -65,6 +65,7 @@
 
 import sys
 import numpy as np
+import itertools
 
 import cv2
 import json
@@ -138,7 +139,8 @@ class KnPage:
                 self.height, self.width, self.depth = self.img.shape
                 self.centroids = []
                 self.boxes = []
-                self.candidates = {'upper':[], 'lower':[], 'center':[], 'left':[], 'right':[]}
+                self.candidates = {'upper': [], 'lower': [],
+                                   'center': [], 'left': [], 'right': []}
                 self.gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
                 self.getBinarized()
         else:
@@ -149,6 +151,7 @@ class KnPage:
         self.getHoughLines()
         if self.enoughLines():
             self.findCornerLines()
+            self.findCenterLine()
             # self.verifyCornerLines()
         else:
             raise
@@ -156,9 +159,9 @@ class KnPage:
         for d in ['upper', 'lower', 'center', 'right', 'left']:
             self.originalCorner[d] = int(self.cornerLines[d][0] / self.scale)
 
-        oc = self.originalCorner
-        self.leftPage = self.img[oc['upper']:oc['lower'], oc['left']:oc['center']]
-        self.rightPage = self.img[oc['upper']:oc['lower'], oc['center']:oc['right']]
+        o = self.originalCorner
+        self.leftPage = self.img[o['upper']:o['lower'], o['left']:o['center']]
+        self.rightPage = self.img[o['upper']:o['lower'], o['center']:o['right']]
 
         self.write(self.mkFilename(fix='_left', ext='.jpeg'), self.leftPage)
         self.write(self.mkFilename(fix='_right', ext='.jpeg'), self.rightPage)
@@ -309,7 +312,8 @@ class KnPage:
             theta, rhoの順に2段のkeyにもとづきsortしておく。
         """
         self.lines = cv2.HoughLines(self.small_img_canny,
-                                    self.rho, self.theta, self.minimumVote)[0].tolist()
+                                    self.rho, self.theta,
+                                    self.minimumVote)[0].tolist()
         self.lines.sort(key=lambda x: (x[1], x[0]))
 
     def getHoughLinesP(self):
@@ -396,11 +400,11 @@ class KnPage:
 
     def makeSmallZone(self, levels=None):
         if levels is None:
-            levels = { 'upper' : [0.03, 0.25],
-                       'lower' : [0.75, 0.97],
-                       'center': [0.45, 0.55],
-                       'left'  : [0.03, 0.25],
-                       'right' : [0.75, 0.97] }
+            levels = {'upper':  [0.03, 0.25],
+                      'lower':  [0.75, 0.97],
+                      'center': [0.45, 0.55],
+                      'left':   [0.03, 0.25],
+                      'right':  [0.75, 0.97]}
         self.small_zone = {}
         for d in ['upper', 'lower']:
             self.small_zone[d] = [self.small_height * x for x in levels[d]]
@@ -446,9 +450,19 @@ class KnPage:
 #                        if self.small_zone[direction][0] < line[0] <\
 #                           self.small_zone[direction][1]]
 
+    def findCenterLine(self):
+        diffOfPageWidth = lambda (left, center, right):\
+            abs((right[0] - center[0]) - (center[0] - left[0]))
+        tuplesOfVertLines =\
+            sorted(itertools.product(self.candidates['left'],
+                                     self.candidates['center'],
+                                     self.candidates['right']),
+                   key=diffOfPageWidth)
+        self.cornerLines['center'] = tuplesOfVertLines[0][1]
+
     def findCornerLines(self):
         self.cornerLines = {}
-        for (d, w) in [('upper', 'min'), ('lower', 'max'), ('center', 'center'),
+        for (d, w) in [('upper', 'min'), ('lower', 'max'),
                        ('left', 'min'), ('right', 'max')]:
             lines = self.candidates[d]
             if len(lines) == 0:
