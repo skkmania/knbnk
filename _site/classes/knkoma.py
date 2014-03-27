@@ -348,7 +348,8 @@ class KnKoma:
         """
         if horv == 'h':
             if self.isHorizontal(line0) and self.isHorizontal(line1):
-                if max(line0[0][1], line0[1][1]) > max(line1[0][1], line1[1][1]):
+                if max(line0[0][1], line0[1][1]) >\
+                        max(line1[0][1], line1[1][1]):
                     return "upper"
                 else:
                     return "lower"
@@ -356,7 +357,8 @@ class KnKoma:
                 raise KnKomaException('wrong recognition of line')
         else:
             if self.isVertical(line0) and self.isVertical(line1):
-                if max(line0[0][0], line0[1][0]) > max(line1[0][0], line1[1][0]):
+                if max(line0[0][0], line0[1][0]) >\
+                        max(line1[0][0], line1[1][0]):
                     return "right"
                 else:
                     return "left"
@@ -436,19 +438,6 @@ class KnKoma:
                 return lines[0]
             elif way == 'max':
                 return lines[-1]
-
-#    def linesInZone(self, direction):
-#        if direction in ['upper', 'lower']:
-#            return [line for line
-#                          in self.horizLines
-#                             if self.small_zone[direction][0]
-#                                 < line[0] <
-#                                self.small_zone[direction][1]
-#                   ]
-#        else:
-#            return [line for line in self.vertLines\
-#                        if self.small_zone[direction][0] < line[0] <\
-#                           self.small_zone[direction][1]]
 
     def findCenterLine(self):
         diffOfPageWidth = lambda (left, center, right):\
@@ -578,26 +567,6 @@ class KnKoma:
         outfilename = self.mkFilename('_small_img_with_linesP', outdir)
         cv2.imwrite(outfilename, self.small_img_with_linesP)
 
-    def write_contours_bounding_rect_to_file(self, outdir=None):
-        if not hasattr(self, 'contours'):
-            self.getContours()
-        om = np.zeros(self.img.shape, np.uint8)
-        for cnt in self.contours:
-            x, y, w, h = cv2.boundingRect(cnt)
-            cv2.rectangle(om, (x, y), (x + w, y + h), [0, 255, 0])
-            if (int(w) in range(60, 120)) or (int(h) in range(60, 120)):
-                self.centroids.append((x + w / 2, y + h / 2))
-                cv2.circle(om, (int(x + w / 2),
-                                int(y + h / 2)), 5, [0, 255, 0])
-        self.write(self.mkFilename('_cont_rect', outdir), om)
-
-    def write_boxes_to_file(self, outdir):
-        om = np.zeros(self.img.shape, np.uint8)
-        for box in self.boxes:
-            x, y, w, h = box
-            cv2.rectangle(om, (x, y), (x + w, y + h), [0, 255, 0])
-        self.write(self.mkFilename('_boxes', outdir), om)
-
     def write_data_file(self, outdir):
         if not hasattr(self, 'contours'):
             self.getContours()
@@ -619,47 +588,10 @@ class KnKoma:
         outfilename = self.mkFilename('_binarized', outdir)
         self.write(outfilename, self.binarized)
 
-    def write_original_with_contour_file(self, outdir):
-        if not hasattr(self, 'contours'):
-            self.getContours()
-        self.orig_w_cont = self.img.copy()
-        for point in self.contours:
-            x, y = point[0][0]
-            cv2.circle(self.orig_w_cont, (x, y), 1, [0, 0, 255])
-        outfilename = self.mkFilename('_orig_w_cont', outdir)
-        self.write(outfilename, self.orig_w_cont)
-
-    def write_original_with_contour_and_rect_file(self, outdir):
-        if not hasattr(self, 'contours'):
-            self.getContours()
-        self.orig_w_cont_and_rect = self.img.copy()
-        om = self.orig_w_cont_and_rect
-        for cnt in self.contours:
-            x, y, w, h = cv2.boundingRect(cnt)
-            cv2.rectangle(om, (x, y), (x + w, y + h), [0, 255, 0])
-            if (int(w) in range(60, 120)) or (int(h) in range(60, 120)):
-                self.centroids.append((x + w / 2, y + h / 2))
-                cv2.circle(om, (int(x + w / 2),
-                                int(y + h / 2)), 5, [0, 255, 0])
-            cx, cy = cnt[0][0]
-            cv2.circle(om, (cx, cy), 2, [0, 0, 255])
-        outfilename = self.mkFilename('_orig_w_cont_and_rect', outdir)
-        self.write(outfilename, self.orig_w_cont_and_rect)
-
-    def write_all(self, outdir):
-        self.write_data_file(outdir)
-        self.write_binarized_file(outdir)
-        self.write_contours_bounding_rect_to_file(outdir)
-        self.write_original_with_contour_file(outdir)
-        self.write_original_with_contour_and_rect_file(outdir)
-        self.write_collected_boxes_to_file(outdir)
-        self.write_original_with_collected_boxes_to_file(outdir)
-
     def include(self, box1, box2):
         """
            box1 が box2 を包含するならtrueを返す。
         """
-
         ax1, ay1, w1, h1 = box1
         ax2 = ax1 + w1
         ay2 = ay1 + h1
@@ -674,8 +606,8 @@ class KnKoma:
 
     def intersect(self, box1, box2, x_margin=20, y_margin=8):
         """
-           box1 と box2 が交わるか接するならtrueを返す。
-           marginを指定することですこし離れていても交わっていると判定させることができる
+        box1 と box2 が交わるか接するならtrueを返す。
+        marginを指定することですこし離れていても交わっていると判定させることができる
         """
         xm = x_margin
         ym = y_margin
@@ -762,115 +694,6 @@ class KnKoma:
             print("function called")
             return f()
         return wrapper
-
-    def get_adj_boxes(self, boxes, abox):
-        """
-        隣接するboxのリストを返す
-        入力：
-        boxes : boxのリスト。探索対象。
-        abox : あるbox。探索の起点。このboxに隣接するboxからなるリストを返す。
-        ここで隣接するとは、直接aboxに隣接するもの,
-                            間接的にaboxに隣接するもの(隣の隣もそのまた隣もみな隣とみなす。)
-        をどちらも含める。
-        それゆえ、linked listを再帰でたどるのと同様に、この関数も再帰を利用している。
-        出力: boxのリスト
-        """
-        if abox in boxes:
-            boxes.remove(abox)
-
-        if len(abox) > 0:
-            ret = [x for x in boxes if self.intersect(abox, x)]
-        else:
-            return []
-
-        if len(ret) > 0:
-            for x in ret:
-                boxes.remove(x)
-            if len(boxes) > 0:
-                for x in ret:
-                    subs = self.get_adj_boxes(boxes, x)
-                    ret += subs
-            else:
-                return ret
-            return ret
-        else:
-            return []
-
-    def write_self_boxes_to_file(self, outdir):
-        with open(self.mkFilename('_self_boxes', outdir, '.txt'), 'w') as f:
-            f.write("self.boxes\n")
-            for box in self.boxes:
-                f.write(str(box) + "\n")
-            f.write("\n")
-
-    def collect_boxes(self):
-        """
-        bounding boxを包含するboxに統合し、文字を囲むboxの取得を試みる
-        """
-
-        if len(self.boxes) == 0:
-            self.getCentroids()
-
-        # w, h どちらかが200以上のboxは排除
-        self.boxes = [x for x in self.boxes if (x[2] < 200) and (x[3] < 200)]
-
-        outdir = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data'
-        self.write_self_boxes_to_file(outdir)    # for debug
-
-        self.collected_boxes = []
-        adjs = []
-
-        f = open('while_process.txt', 'w')    # for debug
-        while len(self.boxes) > 0:
-            # for debug
-            f.write('len of self.boxes : ' + str(len(self.boxes)) + "\n")
-            abox = self.boxes.pop()
-            f.write('abox : ' + str(abox) + "\n")    # for debug
-            adjs = self.get_adj_boxes(self.boxes, abox)
-            f.write('adjs : ' + str(adjs) + "\n")    # for debug
-            for x in adjs:
-                if x in self.boxes:
-                    self.boxes.remove(x)
-            f.write('len of self.boxes after remove : '
-                    + str(len(self.boxes)) + "\n")    # for debug
-            f.write('self.boxes after remove: '
-                    + str(self.boxes) + "\n")    # for debug
-            adjs.append(abox)
-            f.write('adjs after append: ' + str(adjs) + "\n")    # for debug
-            if len(adjs) > 0:
-                boundingBox = self.get_boundingBox(adjs)
-                f.write('boundingBox : '
-                        + str(boundingBox) + "\n")    # for debug
-                self.collected_boxes.append(boundingBox)
-                f.write('self.collected_boxes : '
-                        + str(self.collected_boxes) + "\n")    # for debug
-
-        f.close()    # for debug
-
-    def write_collected_boxes_to_file(self, outdir=None):
-        if not hasattr(self, 'collected_boxes'):
-            self.collect_boxes()
-
-        om = np.zeros(self.img.shape, np.uint8)
-        for box in self.collected_boxes:
-            x, y, w, h = box
-            cv2.rectangle(om, (x, y), (x + w, y + h), [0, 0, 255])
-        self.write(self.mkFilename('_collected_box', outdir), om)
-
-    def write_original_with_collected_boxes_to_file(self, outdir=None):
-        if not hasattr(self, 'collected_boxes'):
-            self.collect_boxes()
-            self.boxes = self.collected_boxes
-            self.collect_boxes()
-            self.boxes = self.collected_boxes
-            self.collect_boxes()
-
-        self.orig_w_collected = self.img.copy()
-        om = self.orig_w_collected
-        for box in self.collected_boxes:
-            x, y, w, h = box
-            cv2.rectangle(om, (x, y), (x + w, y + h), [0, 0, 255])
-        self.write(self.mkFilename('_orig_w_collected_box', outdir), om)
 
     def isVertical(self, line):
         """

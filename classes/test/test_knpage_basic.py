@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import pytest
-from hamcrest import *
+import hamcrest as h
 from classes.knpage import KnPage
 from classes.knpage import KnPageException
 from classes.knpage import KnPageParamsException
@@ -70,7 +70,8 @@ class TestNew:
         assert kn.binarized is not None
 
     def test_new_try_hamcrest(self, kn):
-        assert_that(kn.height, equal_to(558))
+        h.assert_that(kn.height, h.equal_to(558))
+
 
 class TestParams:
     def pytest_funcarg__kn(request):
@@ -131,6 +132,7 @@ class TestTmpDir:
         sampleFile = str(dataDirectory.join("sample.jpeg"))
         kn.write(sampleFile)
         assert 'sample.jpeg' in sampleFile
+        assert sampleFile != '/tmp/pytest-skkmania/data/sample.jpeg'
 
 
 class TestGradients:
@@ -149,6 +151,7 @@ class TestGradients:
         kn = KnPage(fname, datadir=DATA_DIR, params=paramfname)
         kn.getGradients()
         kn.write_gradients(DATA_DIR)
+
 
 class TestFileName:
     def test_mkFilename(self, kn):
@@ -204,7 +207,8 @@ class TestBoundingRect:
         assert not kn.intersect(box04, box05, 0, 0)
 
     def test_sweep_included_boxes(self, kn):
-        result = kn.sweep_included_boxes([box01, box02, box03, box04, box05, box06])
+        result = kn.sweep_included_boxes(
+            [box01, box02, box03, box04, box05, box06])
         assert len(result) == 5
 
     def test_sweep_included_boxes_2(self, kn):
@@ -214,9 +218,11 @@ class TestBoundingRect:
 
 class TestManipulateBoxes:
     def test_get_adj_boxes(self, kn):
-        boxes = [box01,box02,box03,box04,box05,box06, box11,box12,box13,box14,box15,box16]
+        boxes = [box01, box02, box03, box04, box05, box06,
+                 box11, box12, box13, box14, box15, box16]
         result = kn.get_adj_boxes(boxes, box01)
-        assert list( set(result) - set([box01,box02,box03,box04,box05,box06]) )  == []
+        assert list(set(result) -
+                    set([box01, box02, box03, box04, box05, box06])) == []
 
     def test_write_original_with_contour_and_rect_file(self, kn):
         kn.write_original_with_collected_boxes_to_file(DATA_DIR)

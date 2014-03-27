@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 import pytest
 from hamcrest import *
-from classes.knpage import KnPage
-from classes.knpage import KnPageException
-from classes.knpage import KnPageParamsException
+from classes.knkoma import KnKoma
+from classes.knkoma import KnKomaException
+from classes.knkoma import KnKomaParamsException
 
 HOME_DIR = '/home/skkmania'
 DATA_DIR = HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data'
@@ -32,31 +32,31 @@ def test_function(myfuncarg):
 def pytest_funcarg__kn(request):
     img_fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
     params_fname = DATA_DIR + '/twletters_01.json'
-    kn = KnPage(fname=img_fname, datadir=DATA_DIR, params=params_fname)
+    kn = KnKoma(fname=img_fname, datadir=DATA_DIR, params=params_fname)
     return kn
 
 
 def pytest_funcarg__kn2(request):
     fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
     params_file_name = DATA_DIR + '/twletters_01.json'
-    return KnPage(fname, params=params_file_name)
+    return KnKoma(fname, params=params_file_name)
 
 
 class TestNew:
     def test_initialize_without_params(self):
-        with pytest.raises(KnPageException) as e:
-            KnPage()
+        with pytest.raises(KnKomaException) as e:
+            KnKoma()
         assert 'params is None' in str(e)
 
     def test_initialize_with_fname_not_existed(self):
-        with pytest.raises(KnPageParamsException) as e:
-        #with pytest.raises(KnPageException) as e:
-            KnPage(params='not_exist_file')
+        with pytest.raises(KnKomaParamsException) as e:
+        #with pytest.raises(KnKomaException) as e:
+            KnKoma(params='not_exist_file')
         assert 'not_exist_file' in str(e)
 
     def test_initialize_with_imcomplete_param_file(self):
-        with pytest.raises(KnPageParamsException) as e:
-            KnPage(params=DATA_DIR + '/imcomplete_sample.json')
+        with pytest.raises(KnKomaParamsException) as e:
+            KnKoma(params=DATA_DIR + '/imcomplete_sample.json')
         assert 'must be' in str(e)
 
     def test_new(self, kn):
@@ -76,12 +76,12 @@ class TestParams:
     def pytest_funcarg__kn(request):
         fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
         paramfname = DATA_DIR + '/twletters_01.json'
-        return KnPage(fname, datadir=DATA_DIR, params=paramfname)
+        return KnKoma(fname, datadir=DATA_DIR, params=paramfname)
 
     def pytest_funcarg__kn2(request):
         fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
         params_file_name = DATA_DIR + '/twletters_01.json'
-        return KnPage(fname, params=params_file_name)
+        return KnKoma(fname, params=params_file_name)
 
     def test_read_params(self, kn):
         """
@@ -94,12 +94,12 @@ class TestParams:
         params = DATA_DIR + '/twletters_01.json'
         kn.read_params(params)
         assert kn.parameters is not None
-        assert len(kn.parameters) == 8
+        assert len(kn.parameters) == 10
         assert kn.parameters['outfilename'] == "twl_can_50_200"
         assert kn.parameters['boundingRect'] == [16, 32]
         assert kn.parameters['mode'] == "EXTERNAL"
         assert kn.parameters['method'] == "NONE"
-        assert kn.parameters['canny'] == [50, 200]
+        assert kn.parameters['canny'] == [50, 200, 3]
 
     def test_new_with_params(self, kn2):
         assert kn2.img is not None
@@ -109,9 +109,6 @@ class TestParams:
         #assertEqual(kn2.width, 669)
         #assertEqual(kn2.depth, 3)
 
-    def test_divide(self, kn):
-        kn.divide()
-        assert kn.left == kn.right
 
     def test_write(self, kn, tmpdir):
         dataDirectory = tmpdir.mkdir('data')
@@ -138,7 +135,7 @@ class TestGradients:
     def test_write(elf, idx):
         fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
         paramfname = DATA_DIR + '/twletters_gradients_0' + str(idx) + '.json'
-        kn = KnPage(fname, datadir=DATA_DIR, params=paramfname)
+        kn = KnKoma(fname, datadir=DATA_DIR, params=paramfname)
         kn.getGradients()
         kn.write_gradients(DATA_DIR)
 
@@ -146,7 +143,7 @@ class TestGradients:
     def test_write_sobel(elf, idx):
         fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
         paramfname = DATA_DIR + '/twletters_sobel_k_' + str(idx) + '.json'
-        kn = KnPage(fname, datadir=DATA_DIR, params=paramfname)
+        kn = KnKoma(fname, datadir=DATA_DIR, params=paramfname)
         kn.getGradients()
         kn.write_gradients(DATA_DIR)
 
@@ -184,7 +181,7 @@ class TestBoundingRect:
         box05 = (10, 45, 20, 20)
         fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
         params_fname = DATA_DIR + '/twletters_01.json'
-        kn = KnPage(fname=fname, datadir=DATA_DIR, params=params_fname)
+        kn = KnKoma(fname=fname, datadir=DATA_DIR, params=params_fname)
         assert kn.intersect(box01, box02)
         assert kn.intersect(box01, box03)
         assert not kn.intersect(box01, box03, 0, 0)
