@@ -551,7 +551,7 @@ class KnKoma:
             cv2.line(self.small_img_with_linesP,
                      pt1, pt2, (0, 0, 255), 2)
 
-    def write_small_img(self, outdir):
+    def write_small_img(self, outdir=None):
         outfilename = self.mkFilename('_small_img', outdir)
         cv2.imwrite(outfilename, self.small_img)
         outfilename = self.mkFilename('_small_img_gray', outdir)
@@ -559,15 +559,15 @@ class KnKoma:
         outfilename = self.mkFilename('_small_img_canny', outdir)
         cv2.imwrite(outfilename, self.small_img_canny)
 
-    def write_small_img_with_lines(self, outdir):
+    def write_small_img_with_lines(self, outdir=None):
         outfilename = self.mkFilename('_small_img_with_lines', outdir)
         cv2.imwrite(outfilename, self.small_img_with_lines)
 
-    def write_small_img_with_linesP(self, outdir):
+    def write_small_img_with_linesP(self, outdir=None):
         outfilename = self.mkFilename('_small_img_with_linesP', outdir)
         cv2.imwrite(outfilename, self.small_img_with_linesP)
 
-    def write_data_file(self, outdir):
+    def write_data_file(self, outdir=None):
         if not hasattr(self, 'contours'):
             self.getContours()
         outfilename = self.mkFilename('data', outdir)
@@ -582,7 +582,7 @@ class KnKoma:
                 f.writelines(str(hic))
                 f.write("\n")
 
-    def write_binarized_file(self, outdir):
+    def write_binarized_file(self, outdir=None):
         if not hasattr(self, 'contours'):
             self.getContours()
         outfilename = self.mkFilename('_binarized', outdir)

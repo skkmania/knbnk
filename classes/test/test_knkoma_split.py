@@ -1,16 +1,24 @@
 # -*- coding: utf-8 -*-
 import pytest
+import os
 import os.path
+#import dircache
 import json
 import shutil
 import itertools
 
 from classes.knkoma import KnKoma
 
-HOME_DIR = '/home/skkmania'
-#DATA_DIR = HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data/1123003'
-#DATA_DIR = HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data/1080614'
-DATA_DIR = HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data/1142178'
+# DATA_DIRにtar ballを置いておけばテストが走るという使い方をすること
+#  例えば、1123033.tar.bz2をおいておきテストを実行すると
+#  DATA_DIR/1123033 がつくられ、そこにparameter fileと結果のfileが展開される
+#  そのためのparameterのデータはこのテスト用のファイルか、ここから読み込む
+#  設定ファイルにおく
+#  testを終え、必要な確認やデータの保存をすませたあとは
+#  DATA_DIR/1123033は削除してしまえばよいものとする
+
+HOME_DIR = u"/home/skkmania"
+DATA_DIR = HOME_DIR + u"/mnt2/workspace/pysrc/knbnk/data"
 SRC_SAMPLE = {
     "scale_size": [640.0, 480.0, 320.0],
     "boundingRect": [[16, 32]],
@@ -74,6 +82,65 @@ def print_params_files(params_list):
             json.dump(params, f, sort_keys=False, indent=4)
             ret.append(fname)
     return ret
+
+
+def check_test_environment(params, bookId):
+    """
+    paramsに記述されたoutdirの存在確認
+      なければ、tarballの展開とoutdirの作成
+    parmsのtxt file( json format)の作成は常に行う
+    (testのたびにそのtestの設定を使うこと。
+    別のtestの影響を受けたくないので。)
+    """
+    if not os.path.exists(params['outdir']):
+        cmd = 'tar jxf %s/%s.tar.bz2 -C %s' % (DATA_DIR, bookId, DATA_DIR)
+        os.system(cmd)
+        cmd = "find %s -type d -name '*%s*' -exec mv {} %s \\;" %\
+            (DATA_DIR, bookId, params["outdir"])
+        os.system(cmd)
+
+    print_params_files([params])
+
+
+def check_book_directory(bookId):
+    """
+    outdir = DATA_DIR + '/' + bookId の存在確認
+      なければ、tarballの展開とoutdirの作成
+    """
+    outdir = DATA_DIR + '/' + bookId
+    if not os.path.exists(outdir):
+        cmd = 'tar jxf %s/%s.tar.bz2 -C %s' % (DATA_DIR, bookId, DATA_DIR)
+        os.system(cmd)
+        cmd = "find %s -type d -name '*%s*' -exec mv {} %s \\;" %\
+            (DATA_DIR, bookId, outdir)
+        os.system(cmd)
+
+class TestCheckTestEnvironment:
+    @pytest.mark.parametrize("bookId", [
+        "1092905", "1091460"
+    ])
+    def test_check_test_environment(self, bookId):
+        params = {'outdir': DATA_DIR + "/" + bookId,
+                  'paramfname': DATA_DIR + "/" + bookId + "/test_made.json",
+                  }
+        if os.path.exists(params['outdir']):
+            cmd = 'rm -rf ' + params['outdir']
+            os.system(cmd)
+        check_test_environment(params, bookId)
+        result = os.path.exists(params['outdir'])
+        assert result is True
+
+
+def mk_params_file(params):
+    """
+    入力: dict型 : parametersが列挙されている。
+    戻り値: なし。
+    副作用: 単体のparameter fileが作成される。(json形式のtext file)
+            作成されるfileの場所、名前はparams自身に記されているとおり
+    """
+    fname = params['paramfname']
+    with open(fname, 'w') as f:
+        json.dump(params, f, sort_keys=False, indent=4)
 
 
 class TestParamsGenerator:
@@ -175,59 +242,110 @@ def edit_parms_file(pfbody=None, imfname=None, opts=None, data_dir=None):
 
 
 def pytest_funcarg__kn(request):
-    DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data/1123003'
-    img_fname = DATA_DIR + '/007.jpeg'
-    params_fname = DATA_DIR + '/hough_1_2_100.json'
-    kn = KnKoma(fname=img_fname, datadir=DATA_DIR, params=params_fname)
-    return kn
-
-
-def pytest_funcarg__kn2(request):
-    fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
-    params_file_name = DATA_DIR + '/twletters_01.json'
-    return KnKoma(fname, params=params_file_name)
+    params = {
+        "scale_size": 640.0,
+        "boundingRect": [16, 32],
+        "hough": [1, 2, 100],
+        "imgfname": "/home/skkmania/mnt2/workspace/pysrc/knbnk/data/1123003/007.jpeg",
+        "outfilename": "hough_1_2_100_007",
+        "mode": "EXTERNAL",
+        "canny": [50, 200, 3],
+        "paramfname": "/home/skkmania/mnt2/workspace/pysrc/knbnk/data/1123003/hough_1_2_100.json",
+        "method": "NONE",
+        "outdir": "/home/skkmania/mnt2/workspace/pysrc/knbnk/data/1123003"
+    }
+    check_test_environment(params, '1123003')
+    return KnKoma(params=params['paramfname'])
 
 
 def pytest_funcarg__knManyLines(request):
-    DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data/1142178'
-    img_fname = DATA_DIR + '/007.jpeg'
-    params_fname = DATA_DIR + '/o_011_ss_320_hgh_1_2_80_can_50_150_3_60.json'
-    kn = KnKoma(fname=img_fname, datadir=DATA_DIR, params=params_fname)
-    return kn
+    params = {
+        "scale_size": 320.0,
+        "boundingRect": [16, 32],
+        "hough": [1, 2, 80],
+        "imgfname": "/home/skkmania/mnt2/workspace/pysrc/knbnk/data/1142178/007.jpeg",
+        "outfilename": "o_007_ss_320_hgh_1_2_80_can_50_150_3_60",
+        "mode": "EXTERNAL",
+        "canny": [50, 150, 3],
+        "paramfname": "/home/skkmania/mnt2/workspace/pysrc/knbnk/data/1142178/o_007_ss_320_hgh_1_2_80_can_50_150_3_60.json",
+        "method": "NONE",
+        "outdir": "/home/skkmania/mnt2/workspace/pysrc/knbnk/data/1142178"
+    }
+    check_test_environment(params, '1142178')
+    return KnKoma(params=params['paramfname'])
 
 
 def pytest_funcarg__knFewLines(request):
-    DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data/1123003'
-    img_fname = DATA_DIR + '/006.jpeg'
-    params_fname = DATA_DIR + '/hough_1_180_200.json'
-    kn = KnKoma(fname=img_fname, datadir=DATA_DIR, params=params_fname)
-    return kn
+    params = {
+        "scale_size": 320.0,
+        "boundingRect": [16, 32],
+        "hough": [1, 180, 200],
+        "imgfname": "/home/skkmania/mnt2/workspace/pysrc/knbnk/data/1123003/006.jpeg",
+        "outfilename": "o_006_ss_320_hgh_1_180_200_can_50_150_3_60",
+        "mode": "EXTERNAL",
+        "canny": [50, 150, 3],
+        "paramfname": "/home/skkmania/mnt2/workspace/pysrc/knbnk/data/1123003/o_006_ss_320_hgh_1_180_200_can_50_150_3_60.json",
+        "method": "NONE",
+        "outdir": "/home/skkmania/mnt2/workspace/pysrc/knbnk/data/1123003"
+    }
+    check_test_environment(params, '1123003')
+    return KnKoma(params=params['paramfname'])
 
 
 class TestGetHoughLinesP:
-    def test_getHoughLinesP(self, kn):
-        kn.prepareForLines()
-        kn.getHoughLinesP()
-
-    def test_write_lines_to_file(self, kn):
-        kn.prepareForLines()
-        kn.getHoughLinesP()
-        kn.write_linesP_to_file(DATA_DIR)
+    def test_getHoughLinesP(self):
+        bookId = '1123003'
+        data_dir = DATA_DIR + '/' + bookId
+        params = {
+            "scale_size": 640.0,
+            "boundingRect": [16, 32],
+            "imgfname": data_dir + '/007.jpeg',
+            "outfilename": "hough_1_2_100_007",
+            "mode": "EXTERNAL",
+            "canny": [50, 200, 3],
+            "hough": [1, 2, 100],
+            "paramfname": data_dir + '/hough_1_2_100.json',
+            "method": "NONE",
+            "outdir": data_dir
+        }
+        check_test_environment(params, bookId)
+        kns = KnKoma(params=params['paramfname'])
+        kns.prepareForLines()
+        kns.getHoughLinesP()
+        kns.write_linesP_to_file(data_dir)
 
 
 class TestGetHoughLines:
-    def test_prepareForLines(self, kn):
-        kn.prepareForLines()
+    def pytest_funcarg__kns(self, request):
+        bookId = '1123003'
+        self.data_dir = DATA_DIR + '/' + bookId
+        params = {
+            "scale_size": 640.0,
+            "boundingRect": [16, 32],
+            "imgfname": self.data_dir + '/007.jpeg',
+            "outfilename": "hough_1_2_100_007",
+            "mode": "EXTERNAL",
+            "canny": [50, 200, 3],
+            "hough": [1, 2, 100],
+            "paramfname": self.data_dir + '/hough_1_2_100.json',
+            "method": "NONE",
+            "outdir": self.data_dir
+        }
+        check_test_environment(params, bookId)
+        return KnKoma(params=params['paramfname'])
 
-    def test_getHoughLines(self, kn):
-        kn.prepareForLines()
-        kn.getHoughLines()
+    def test_prepareForLines(self, kns):
+        kns.prepareForLines()
 
-    def test_write_lines_to_file(self, kn):
-        kn.prepareForLines()
-        kn.getHoughLines()
-        kn.write_lines_to_file(DATA_DIR)
-        assert len(kn.lines) > 0
+    def test_getHoughLines(self, kns):
+        kns.prepareForLines()
+        kns.getHoughLines()
+
+    def test_write_lines_to_file(self, kns):
+        kns.prepareForLines()
+        kns.getHoughLines()
+        kns.write_lines_to_file(self.data_dir)
+        assert len(kns.lines) > 0
 
 
 class TestSelectLine:
@@ -246,12 +364,6 @@ class TestDivide:
 
 
 class TestEnoughLines:
-    def test_makeCandidates(self, knManyLines):
-        knManyLines.prepareForLines()
-        knManyLines.getHoughLines()
-        result = knManyLines.enoughLines()
-        assert result is True
-
     def test_enoughLines(self, knManyLines):
         knManyLines.prepareForLines()
         knManyLines.getHoughLines()
@@ -287,7 +399,7 @@ class TestFindCornerLines:
 class TestWriteSmallImage:
     def test_write_small_img(self):
         DATA_DIR = HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data/1123003'
-        opts = {
+        params = {
             "scale_size": 640.0,
             "boundingRect": [16, 32],
             "imgfname": DATA_DIR + "/007.jpeg",
@@ -299,8 +411,8 @@ class TestWriteSmallImage:
             "method": "NONE",
             "outdir": DATA_DIR
         }
-        edit_parms_file(opts=opts)
-        kn = KnKoma(params=opts["paramfname"])
+        check_test_environment(params, '1123003')
+        kn = KnKoma(params=params["paramfname"])
         kn.prepareForLines()
         kn.write_small_img(DATA_DIR)
         assert kn.small_img is not None
@@ -313,14 +425,10 @@ class TestSmallImage:
         kn.get_small_img_with_lines()
         assert kn.small_img is not None
 
-    def test_write_small_img(self):
-        DATA_DIR = HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data'
-        img_fname = DATA_DIR + '/007.jpeg'
-        params_fname = DATA_DIR + '/005_split_01.json'
-        kn = KnKoma(fname=img_fname, datadir=DATA_DIR, params=params_fname)
+    def test_write_small_img(self, kn):
         kn.prepareForLines()
         kn.getHoughLines()
-        kn.write_small_img(DATA_DIR)
+        kn.write_small_img()
         assert kn.small_img is not None
 
     def test_write_small_img_with_lines(self, kn):
@@ -341,6 +449,7 @@ class TestGetHoughLinesWithManyPatterns:
         ("hough_1_90_150", "007.jpeg"),
         ("hough_1_90_200", "007.jpeg")])
     def test_get_small_img_with_linesP(self, pfbody, imfname):
+        check_book_directory('1123003')
         DATA_DIR = HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data/1123003'
         edit_parms_file(pfbody, imfname, data_dir=DATA_DIR)
         params_fname = DATA_DIR + '/%s.json' % pfbody
@@ -354,17 +463,20 @@ class TestGetHoughLinesWithManyPatterns:
 
 class TestGetHoughLinesWithParamGenerator:
     def test_get_houghlines_with_param_generator(self):
+        bookId = '1142178'
+        data_dir = DATA_DIR + '/' + bookId
+        check_book_directory(bookId)
         src = {
             "scale_size": [480.0, 320.0],
             "boundingRect": [[16, 32]],
             "imgfname": map(lambda x:
-                            DATA_DIR + '/' + ('%03d' % x) + '.jpeg',
+                            data_dir + '/' + ('%03d' % x) + '.jpeg',
                             range(11, 21)),
             "mode": ["EXTERNAL"],
             "canny": [[50, 150, 3], [50, 100, 3]],
             "hough": [[1, 2, 80], [1, 90, 80], [1, 180, 150]],
             "method": ["NONE"],
-            "outdir": [DATA_DIR]
+            "outdir": [data_dir]
         }
         result = params_generator(src)
         files = print_params_files(result)
@@ -373,7 +485,7 @@ class TestGetHoughLinesWithParamGenerator:
             kn.prepareForLines()
             kn.getHoughLines()
             kn.get_small_img_with_lines()
-            kn.write_small_img_with_lines(DATA_DIR)
+            kn.write_small_img_with_lines()
             assert kn.small_img_with_lines is not None
 
 
@@ -382,5 +494,5 @@ class TestSmallImageP:
         kn.prepareForLines()
         kn.getHoughLinesP()
         kn.get_small_img_with_linesP()
-        kn.write_small_img_with_linesP(DATA_DIR)
+        kn.write_small_img_with_linesP()
         assert kn.small_img_with_linesP is not None

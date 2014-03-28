@@ -73,59 +73,6 @@ class TestNew:
         h.assert_that(kn.height, h.equal_to(558))
 
 
-class TestParams:
-    def pytest_funcarg__kn(request):
-        fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
-        paramfname = DATA_DIR + '/twletters_01.json'
-        return KnPage(fname, datadir=DATA_DIR, params=paramfname)
-
-    def pytest_funcarg__kn2(request):
-        fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
-        params_file_name = DATA_DIR + '/twletters_01.json'
-        return KnPage(fname, params=params_file_name)
-
-    def test_read_params(self, kn):
-        """
-          "outfilename"  : "twl_can_50_200",
-          "boundingRect" : [16, 32],
-          "mode"         : "EXTERNAL",
-          "method"       : "NONE",
-          "canny"        : [50, 200]
-        """
-        params = DATA_DIR + '/twletters_01.json'
-        kn.read_params(params)
-        assert kn.parameters is not None
-        assert len(kn.parameters) == 8
-        assert kn.parameters['outfilename'] == "twl_can_50_200"
-        assert kn.parameters['boundingRect'] == [16, 32]
-        assert kn.parameters['mode'] == "EXTERNAL"
-        assert kn.parameters['method'] == "NONE"
-        assert kn.parameters['canny'] == [50, 200]
-
-    def test_new_with_params(self, kn2):
-        assert kn2.img is not None
-        assert kn2.img.shape != (100, 100, 3)
-        assert kn2.img.shape == (558, 669, 3)
-        assert kn2.height == 558
-        #assertEqual(kn2.width, 669)
-        #assertEqual(kn2.depth, 3)
-
-    def test_divide(self, kn):
-        kn.divide()
-        assert kn.left == kn.right
-
-    def test_write(self, kn, tmpdir):
-        dataDirectory = tmpdir.mkdir('data')
-        sampleFile = dataDirectory.join("sample.jpeg")
-        kn.write(str(sampleFile))
-        kn.write("/tmp/outfile.jpeg")
-
-    def test_write_with_params(self, kn2):
-        kn2.write_data_file(DATA_DIR)
-        kn2.write_binarized_file(DATA_DIR)
-        kn2.write_contours_bounding_rect_to_file(DATA_DIR)
-
-
 class TestTmpDir:
     def test_write(self, kn, tmpdir):
         dataDirectory = tmpdir.mkdir('data')

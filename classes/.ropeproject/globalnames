@@ -1,12 +1,16 @@
 Ä}q(Utest.test_knpage_contours]q(Upytest_funcarg__kn2qUTestWriteScharrqUDATA_DIRqUTestProcessParamFilesqUpytest_funcarg__knSobel2qUpytest_funcarg__knSobel3qUpytest_funcarg__knSobel1q	UTestContoursq
 UTestWriteAllqUpytest_funcarg__knScharr1qUpytest_funcarg__knScharr3qUpytest_funcarg__knScharr2qUTestBinarizedqUTestWriteAllForAllParamsqUpytest_funcarg__kn005qUpytest_funcarg__knqUTestWriteSobelqeUtest.test_new]q(Upytest_funcarg__kn2qUDATA_DIRqU
 TestTmpDirqUtest_functionqUTestContoursqUpytest_funcarg__myfuncargqUpytest_funcarg__knqU
-TestParamsqeUtest.test_knkoma_basic]q(UDATA_DIRqUpytest_funcarg__kn2qUTestManipulateBoxesq UTestFileNameq!UTestNewq"Ubox15q#Ubox14q$Ubox16q%Ubox11q&Ubox13q'Ubox12q(Utest_functionq)UHOME_DIRq*UTestBoundingRectq+U
-TestTmpDirq,U
-TestParamsq-UTestGradientsq.Upytest_funcarg__myfuncargq/Ubox06q0Upytest_funcarg__knq1Ubox04q2Ubox05q3Ubox02q4Ubox03q5Ubox01q6eUtest.test_knkoma_util]q7(hhh!h#h$h%h&h'h(h*UTestCompLineq8UTestInterSectionq9h,h0h1h2h3h4h5h6eUknkoma]q:(UKnKomaq;UKnKomaExceptionq<UKnKomaParamsExceptionq=eUtest.test_knpage]q>U
-TestKnPageq?aUknpage]q@(UKnPageExceptionqAUKnPageqBUKnPageParamsExceptionqCeUtest.test_module]qD(U
-test_func1qEUsetup_functionqFU
-test_func2qGUtest_myoutputqHUa_funcqIeUtest.test_knpage_util]qJ(UDATA_DIRqKUpytest_funcarg__kn2qLUbox15qMUbox14qNUbox16qOUbox11qPUbox13qQUbox12qRUHOME_DIRqSUTestCompLineqTUTestInterSectionqUU
-TestTmpDirqVUbox06qWUpytest_funcarg__knqXUbox04qYUbox05qZUbox02q[Ubox03q\Ubox01q]eUtest.test_knkoma_split]q^(hUTestSmallImageq_UTestGetHoughLinesq`Upytest_funcarg__knManyLinesqaUTestWriteSmallImageqbUTestGetHoughLinesPqcUTestSelectLineqdUTestParamsGeneratorqeUparams_generatorqfU!TestGetHoughLinesWithManyPatternsqgUopts_templateqhhUmkoutfilenameqiUTestGenerateOptsqjh*UTestFindCornerLinesqkU
-TestDivideqlUgenerate_optsqmUTestSmallImagePqnU
-SRC_SAMPLEqoUedit_parms_fileqpU#TestGetHoughLinesWithParamGeneratorqqUTestEnoughLinesqrh1Uprint_params_filesqsUpytest_funcarg__knFewLinesqteUtest.test_knpage_basic]qu(hhh h!h"h#h$h%h&h'h(h)h-h*h+h,h.h/h0h1h2h3h4h5h6eUtest.test_knpage_split]qv(hh_h`hihbhchdhehfhghhhhahjh*hkhlhmhnhoh,hphqhrh1h-hshteu.
+TestParamsqeUtest.conftest]q(UYamlItemqUpytest_collect_fileqUYamlFileq UYamlExceptionq!Upytest_runtest_setupq"eUtest.test_knkoma_basic]q#(UDATA_DIRq$Upytest_funcarg__kn2q%UTestFileNameq&UTestNewq'Ubox15q(Ubox14q)Ubox16q*Ubox11q+Ubox13q,Ubox12q-Utest_functionq.U
+TestParamsq/UHOME_DIRq0U
+TestTmpDirq1UTestGradientsq2Upytest_funcarg__myfuncargq3Ubox06q4Upytest_funcarg__knq5Ubox04q6Ubox05q7Ubox02q8Ubox03q9Ubox01q:eUtest.test_knkoma_util]q;(UDATA_DIRq<Upytest_funcarg__kn2q=UTestFileNameq>Ubox15q?Ubox14q@Ubox16qAUbox11qBUbox13qCUbox12qDUHOME_DIRqEUTestCompLineqFUTestInterSectionqGU
+TestTmpDirqHUbox06qIUpytest_funcarg__knqJUbox04qKUbox05qLUbox02qMUbox03qNUbox01qOeUknkoma]qP(UKnKomaqQUKnKomaExceptionqRUKnKomaParamsExceptionqSeUtest.test_knpage]qTU
+TestKnPageqUaUknpage]qV(UKnPageExceptionqWUKnPageqXUKnPageParamsExceptionqYeUtest.test_module]qZ(U
+test_func1q[Usetup_functionq\U
+test_func2q]Utest_myoutputq^Ua_funcq_eUtest.test_knpage_util]q`(UDATA_DIRqaUpytest_funcarg__kn2qbUbox15qcUbox14qdUbox16qeUbox11qfUbox13qgUbox12qhUHOME_DIRqiUTestCompLineqjUTestInterSectionqkU
+TestTmpDirqlUbox06qmUpytest_funcarg__knqnUbox04qoUbox05qpUbox02qqUbox03qrUbox01qseUtest.test_knkoma_split]qt(UDATA_DIRquUTestSmallImageqvUTestGetHoughLinesqwUpytest_funcarg__knManyLinesqxUTestWriteSmallImageqyUTestGetHoughLinesPqzUTestSelectLineq{UTestParamsGeneratorq|Ucheck_book_directoryq}Uparams_generatorq~U!TestGetHoughLinesWithManyPatternsqUmk_params_fileqÄUopts_templateqÅUmkoutfilenameqÇUTestGenerateOptsqÉUHOME_DIRqÑUTestFindCornerLinesqÖU
+TestDivideqÜUgenerate_optsqáUTestSmallImagePqàU
+SRC_SAMPLEqâUedit_parms_fileqäU#TestGetHoughLinesWithParamGeneratorqãUTestCheckTestEnvironmentqåUTestEnoughLinesqçUcheck_test_environmentqéUpytest_funcarg__knqèUprint_params_filesqêUpytest_funcarg__knFewLinesqëeUtest.test_knpage_basic]qí(h$h%UTestManipulateBoxesqìh&h'h(h)h*h+h,h-h.h0UTestBoundingRectqîh1h2h3h4h5h6h7h8h9h:eUtest.test_knpage_split]qï(h<UTestSmallImageqñUTestGetHoughLinesqóUmkoutfilenameqòUTestWriteSmallImageqôUTestGetHoughLinesPqöUTestSelectLineqõUTestParamsGeneratorqúUparams_generatorqùU!TestGetHoughLinesWithManyPatternsqûUopts_templateqüh=Upytest_funcarg__knManyLinesq†UTestGenerateOptsq°hEUTestFindCornerLinesq¢U
+TestDivideq£Ugenerate_optsq§UTestSmallImagePq•U
+SRC_SAMPLEq¶hHUedit_parms_fileqßU#TestGetHoughLinesWithParamGeneratorq®UTestEnoughLinesq©hJU
+TestParamsq™Uprint_params_filesq´Upytest_funcarg__knFewLinesq¨eu.
