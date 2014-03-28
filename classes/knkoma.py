@@ -71,6 +71,7 @@ import cv2
 import json
 import os.path
 #from operator import itemgetter, attrgetter
+from .knutil import mkFilename
 
 
 class KnKomaException(Exception):
@@ -163,8 +164,8 @@ class KnKoma:
         self.leftPage = self.img[o['upper']:o['lower'], o['left']:o['center']]
         self.rightPage = self.img[o['upper']:o['lower'], o['center']:o['right']]
 
-        self.write(self.mkFilename(fix='_left', ext='.jpeg'), self.leftPage)
-        self.write(self.mkFilename(fix='_right', ext='.jpeg'), self.rightPage)
+        self.write(mkFilename(self, fix='_left', ext='.jpeg'), self.leftPage)
+        self.write(mkFilename(self, fix='_right', ext='.jpeg'), self.rightPage)
 
     def write(self, outfilename=None, om=None):
         if om is None:
@@ -186,37 +187,10 @@ class KnKoma:
             arr.append([x])
         return arr
 
-    def mkFilename(self, fix, outdir=None, ext=None):
-        """
-         fix : file name の末尾に付加する
-         outdir : 出力先directoryの指定
-         ext : 拡張子の指定 .txt のように、. ではじめる
-        """
-        dirname = os.path.dirname(self.imgfname)
-        basename = os.path.basename(self.imgfname)
-        if fix == 'data':
-            name, ext = os.path.splitext(basename)
-            if hasattr(self, 'outfilename'):
-                name = self.outfilename
-            name = name + '_data'
-            ext = '.txt'
-        else:
-            if ext is None:
-                name, ext = os.path.splitext(basename)
-            else:
-                name = os.path.splitext(basename)[0]
-
-            if hasattr(self, 'outfilename'):
-                name = self.outfilename
-            name = name + fix
-
-        if outdir is None:
-            return os.path.join(dirname, name + ext)
-        else:
-            return os.path.join(outdir, name + ext)
-
-    # サイズが box_min から box_max のbounding box の重心の配列を返す
     def getCentroids(self, box_min=16, box_max=48):
+        """
+        サイズが box_min から box_max のbounding box の重心の配列を返す
+        """
         if not hasattr(self, 'contours'):
             self.getContours()
 
@@ -491,7 +465,7 @@ class KnKoma:
             self.getHoughLines()
         if not hasattr(self, 'linePoints'):
             self.getLinePoints()
-        outfilename = self.mkFilename('_lines_data', outdir, ext='.txt')
+        outfilename = mkFilename(self, '_lines_data', outdir, ext='.txt')
         with open(outfilename, 'w') as f:
             f.write("stat\n")
             f.write("len of lines : " + str(len(self.lines)) + "\n")
@@ -511,7 +485,7 @@ class KnKoma:
     def write_linesP_to_file(self, outdir):
         if not hasattr(self, 'linesP'):
             self.getHoughLinesP()
-        outfilename = self.mkFilename('_linesP_data', outdir, ext='.txt')
+        outfilename = mkFilename(self, '_linesP_data', outdir, ext='.txt')
         with open(outfilename, 'w') as f:
             f.write("stat\n")
             f.write("linesP\n")
@@ -532,7 +506,7 @@ class KnKoma:
     def write_gradients(self, outdir):
         for n in ['sobel', 'scharr', 'laplacian']:
             if n in self.parameters:
-                outfilename = self.mkFilename('_' + n, outdir)
+                outfilename = mkFilename(self, '_' + n, outdir)
                 img = getattr(self, 'gradients_' + n)
                 cv2.imwrite(outfilename, img)
 
@@ -552,25 +526,25 @@ class KnKoma:
                      pt1, pt2, (0, 0, 255), 2)
 
     def write_small_img(self, outdir=None):
-        outfilename = self.mkFilename('_small_img', outdir)
+        outfilename = mkFilename(self, '_small_img', outdir)
         cv2.imwrite(outfilename, self.small_img)
-        outfilename = self.mkFilename('_small_img_gray', outdir)
+        outfilename = mkFilename(self, '_small_img_gray', outdir)
         cv2.imwrite(outfilename, self.small_img_gray)
-        outfilename = self.mkFilename('_small_img_canny', outdir)
+        outfilename = mkFilename(self, '_small_img_canny', outdir)
         cv2.imwrite(outfilename, self.small_img_canny)
 
     def write_small_img_with_lines(self, outdir=None):
-        outfilename = self.mkFilename('_small_img_with_lines', outdir)
+        outfilename = mkFilename(self, '_small_img_with_lines', outdir)
         cv2.imwrite(outfilename, self.small_img_with_lines)
 
     def write_small_img_with_linesP(self, outdir=None):
-        outfilename = self.mkFilename('_small_img_with_linesP', outdir)
+        outfilename = mkFilename(self, '_small_img_with_linesP', outdir)
         cv2.imwrite(outfilename, self.small_img_with_linesP)
 
     def write_data_file(self, outdir=None):
         if not hasattr(self, 'contours'):
             self.getContours()
-        outfilename = self.mkFilename('data', outdir)
+        outfilename = mkFilename(self, 'data', outdir)
         with open(outfilename, 'w') as f:
             f.write("contours\n")
             for cnt in self.contours:
@@ -585,7 +559,7 @@ class KnKoma:
     def write_binarized_file(self, outdir=None):
         if not hasattr(self, 'contours'):
             self.getContours()
-        outfilename = self.mkFilename('_binarized', outdir)
+        outfilename = mkFilename(self, '_binarized', outdir)
         self.write(outfilename, self.binarized)
 
     def include(self, box1, box2):

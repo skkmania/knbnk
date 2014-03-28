@@ -2,6 +2,7 @@
 import pytest
 from classes.knkoma import KnKoma
 from classes.knkoma import KnKomaException
+from classes.knutil import *
 
 HOME_DIR = '/home/skkmania'
 DATA_DIR = HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data'
@@ -198,7 +199,7 @@ class TestInterSection:
 
 class TestFileName:
     def test_mkFilename(self, kn):
-        name = kn.mkFilename('_cont')
+        name = mkFilename(kn, '_cont')
         expect = DATA_DIR + '/twl_can_50_200_cont.jpg'
         assert name == expect
 

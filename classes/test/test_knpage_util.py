@@ -44,55 +44,6 @@ class TestTmpDir:
         kn.write_data_file(DATA_DIR)
 
 
-class TestCompLine:
-    @pytest.mark.parametrize("line0,line1,horv", [
-        ([(4, 4), (8,  4)], [(1, 3), (7, 5)], 'h'),
-        ([(4, 24), (8,  4)], [(0, 15), (0, 20)], 'h'),
-        ([(10, 100), (20, 10)], [(100, 50), (1000, 5)], 'v'),
-        ([(10, 1000), (50, 100)], [(7, 25), (35, 20)], 'v')
-    ])
-    def test_complLne_wrong_recognition(self, line0, line1, horv):
-        img_fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
-        params_fname = DATA_DIR + '/twletters_01.json'
-        kn = KnPage(fname=img_fname, datadir=DATA_DIR, params=params_fname)
-        with pytest.raises(KnPageException) as e:
-            kn.compLine(line0, line1, horv)
-            assert 'wrong recognition' in str(e)
-            kn.compLine(line1, line0, horv)
-            assert 'wrong recognition' in str(e)
-
-    @pytest.mark.parametrize("line0, line1, horv", [
-        ([(4, 4), (8,  4)], [(1, 3), (7, 3)], 'h'),
-        ([(4, 4), (8,  4)], [(10, 0), (20, 0)], 'h'),
-        ([(10, 10), (20, 10)], [(100, 5), (1000, 5)], 'h'),
-        ([(10, 100), (50, 100)], [(7, 20), (35, 20)], 'h')
-    ])
-    def test_complLne_horizontal(self, line0, line1, horv):
-        img_fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
-        params_fname = DATA_DIR + '/twletters_01.json'
-        kn = KnPage(fname=img_fname, datadir=DATA_DIR, params=params_fname)
-        result = kn.compLine(line0, line1, horv)
-        assert result == "upper"
-        result = kn.compLine(line1, line0, horv)
-        assert result == "lower"
-
-    @pytest.mark.parametrize("line0, line1, horv", [
-        ([(4, 4), (8,  4)], [(1, 3), (7, 3)], 'v'),
-        ([(4, 4), (8,  4)], [(10, 0), (20, 0)], 'v'),
-        ([(10, 10), (20, 10)], [(100, 5), (1000, 5)], 'v'),
-        ([(10, 100), (50, 100)], [(7, 20), (35, 20)], 'v')
-    ])
-    def test_complLne_vertical(self, line0, line1, horv):
-        img_fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
-        params_fname = DATA_DIR + '/twletters_01.json'
-        kn = KnPage(fname=img_fname, datadir=DATA_DIR, params=params_fname)
-        tr = lambda tup: (tup[1], tup[0])
-        result = kn.compLine(map(tr, line0), map(tr, line1), horv)
-        assert result == "right"
-        result = kn.compLine(map(tr, line1), map(tr, line0), horv)
-        assert result == "left"
-
-
 class TestInterSection:
     @pytest.mark.parametrize("line", [
         [(10, 10), (10, 3)],

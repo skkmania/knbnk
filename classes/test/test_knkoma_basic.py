@@ -4,6 +4,7 @@ import hamcrest as h
 from classes.knkoma import KnKoma
 from classes.knkoma import KnKomaException
 from classes.knkoma import KnKomaParamsException
+from classes.knutil import mkFilename
 
 HOME_DIR = '/home/skkmania'
 DATA_DIR = HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data'
@@ -149,7 +150,7 @@ class TestGradients:
 
 class TestFileName:
     def test_mkFilename(self, kn):
-        name = kn.mkFilename('_cont')
+        name = mkFilename(kn, '_cont')
         expect = DATA_DIR + '/twl_can_50_200_cont.jpg'
         assert name == expect
 
