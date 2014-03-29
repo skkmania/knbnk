@@ -1,7 +1,46 @@
 # -*- coding: utf-8 -*-
 import os.path
 import pytest
-import re
+import json
+from classes.knpage import *
+from classes.knutil import *
+
+DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data'
+
+
+def pytest_funcarg__kn005(request):
+    bookId = 'twletters'
+    params = {
+        "scale_size":   640.0,
+        "boundingRect": [16, 32],
+        "mode":         "EXTERNAL",
+        "method":       "NONE",
+        "canny":        [100, 200, 3],
+        "imgfname":     "/".join([DATA_DIR, bookId, "005.jpeg"]),
+        "outdir":       "/".join([DATA_DIR, bookId]),
+        "paramfname":   "/".join([DATA_DIR, bookId, "twletters_04.json"]),
+        "outfilename":  "twl_can_100_200"
+    }
+    check_test_environment(params, bookId)
+    return KnPage(params=params['paramfname'])
+
+
+def pytest_funcarg__twl(request):
+    bookId = 'twletters'
+    params = {
+        "scale_size":   640.0,
+        "boundingRect": [16, 32],
+        "mode":         "EXTERNAL",
+        "method":       "NONE",
+        "canny":        [50, 200, 3],
+        "hough":        [1, 2, 100],
+        "imgfname":     "/".join([DATA_DIR, bookId, "twletters.jpg"]),
+        "outfilename":  "twl_can_50_200_hough_1_2_100",
+        "paramfname":   "/".join([DATA_DIR, bookId, "twletters_01.json"]),
+        "outdir":       "/".join([DATA_DIR, bookId])
+    }
+    check_test_environment(params, bookId)
+    return KnPage(params=params['paramfname'])
 
 
 def pytest_runtest_setup(item):

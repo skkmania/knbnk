@@ -578,47 +578,6 @@ class KnKoma:
         else:
             return False
 
-    def intersect(self, box1, box2, x_margin=20, y_margin=8):
-        """
-        box1 と box2 が交わるか接するならtrueを返す。
-        marginを指定することですこし離れていても交わっていると判定させることができる
-        """
-        xm = x_margin
-        ym = y_margin
-        ax1, ay1, w1, h1 = box1
-        ax2 = ax1 + w1
-        ay2 = ay1 + h1
-        bx1, by1, w2, h2 = box2
-        bx2 = bx1 + w2
-        by2 = by1 + h2
-
-        if (bx1 in range(ax1 - xm, ax2 + xm)) and\
-           (by1 in range(ay1 - ym, ay2 + ym)):
-            return True
-        if (bx2 in range(ax1 - xm, ax2 + xm)) and\
-           (by2 in range(ay1 - ym, ay2 + ym)):
-            return True
-        if (bx2 in range(ax1 - xm, ax2 + xm)) and\
-           (by1 in range(ay1 - ym, ay2 + ym)):
-            return True
-        if (bx1 in range(ax1 - xm, ax2 + xm)) and\
-           (by2 in range(ay1 - ym, ay2 + ym)):
-            return True
-        if (ax1 in range(bx1 - xm, bx2 + xm)) and\
-           (ay1 in range(by1 - ym, by2 + ym)):
-            return True
-        if (ax2 in range(bx1 - xm, bx2 + xm)) and\
-           (ay2 in range(by1 - ym, by2 + ym)):
-            return True
-        if (ax2 in range(bx1 - xm, bx2 + xm)) and\
-           (ay1 in range(by1 - ym, by2 + ym)):
-            return True
-        if (ax1 in range(bx1 - xm, bx2 + xm)) and\
-           (ay2 in range(by1 - ym, by2 + ym)):
-            return True
-
-        return False
-
     def get_boundingBox(self, boxes):
         """
         入力のboxの形式は(x,y,w,h)

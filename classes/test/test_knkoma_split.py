@@ -8,6 +8,7 @@ import shutil
 import itertools
 
 from classes.knkoma import KnKoma
+from classes.knutil import *
 
 # DATA_DIRにtar ballを置いておけばテストが走るという使い方をすること
 #  例えば、1123033.tar.bz2をおいておきテストを実行すると
@@ -42,21 +43,6 @@ opts_template = {
     "method": "NONE",
     "outdir": DATA_DIR
 }
-
-
-def mkoutfilename(params, fix):
-    res = 'o_' + os.path.basename(params['imgfname']).split('.')[0]
-    keys = params.keys()
-    if 'scale_size' in keys:
-        res += "_ss_" + str(int(params['scale_size']))
-
-    if 'hough' in keys:
-        res += "_hgh_" + "_".join(map(str, params['hough']))
-
-    if 'canny' in keys:
-        res += "_can_" + "_".join(map(str, params['canny']))
-
-    return res + fix
 
 
 def params_generator(source):
@@ -114,6 +100,7 @@ def check_book_directory(bookId):
         cmd = "find %s -type d -name '*%s*' -exec mv {} %s \\;" %\
             (DATA_DIR, bookId, outdir)
         os.system(cmd)
+
 
 class TestCheckTestEnvironment:
     @pytest.mark.parametrize("bookId", [

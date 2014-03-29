@@ -4,6 +4,7 @@ import hamcrest as h
 from classes.knpage import KnPage
 from classes.knpage import KnPageException
 from classes.knpage import KnPageParamsException
+from classes.knutil import *
 
 HOME_DIR = '/home/skkmania'
 DATA_DIR = HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data'
@@ -102,7 +103,7 @@ class TestGradients:
 
 class TestFileName:
     def test_mkFilename(self, kn):
-        name = kn.mkFilename('_cont')
+        name = mkFilename(kn, '_cont')
         expect = DATA_DIR + '/twl_can_50_200_cont.jpg'
         assert name == expect
 
@@ -182,6 +183,7 @@ class TestManipulateBoxes:
         kn.collect_boxes()
         kn.write_collected_boxes_to_file(DATA_DIR)
         kn.write_original_with_collected_boxes_to_file(DATA_DIR)
+
 
 #class TestSeparate:
 #    def test_separate(self, kn):
