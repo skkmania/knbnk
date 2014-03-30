@@ -400,7 +400,7 @@ class KnPage:
                 f.write(str(box) + "\n")
             f.write("\n")
 
-    def collect_boxes(self):
+    def collect_boxes(self, outdir=None, debug=False):
         """
         bounding boxを包含するboxに統合し、文字を囲むboxの取得を試みる
         """
@@ -411,38 +411,50 @@ class KnPage:
         # w, h どちらかが200以上のboxは排除
         self.boxes = [x for x in self.boxes if (x[2] < 200) and (x[3] < 200)]
 
-        outdir = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data'
-        self.write_self_boxes_to_file(outdir)    # for debug
+        if outdir is None:
+            outdir = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data'
+
+        if debug:
+            self.write_self_boxes_to_file(outdir)    # for debug
 
         self.collected_boxes = []
         adjs = []
 
-        f = open('while_process.txt', 'w')    # for debug
-        while len(self.boxes) > 0:
-            # for debug
-            f.write('len of self.boxes : ' + str(len(self.boxes)) + "\n")
-            abox = self.boxes.pop()
-            f.write('abox : ' + str(abox) + "\n")    # for debug
-            adjs = self.get_adj_boxes(self.boxes, abox)
-            f.write('adjs : ' + str(adjs) + "\n")    # for debug
-            for x in adjs:
-                if x in self.boxes:
-                    self.boxes.remove(x)
-            f.write('len of self.boxes after remove : '
-                    + str(len(self.boxes)) + "\n")    # for debug
-            f.write('self.boxes after remove: '
-                    + str(self.boxes) + "\n")    # for debug
-            adjs.append(abox)
-            f.write('adjs after append: ' + str(adjs) + "\n")    # for debug
-            if len(adjs) > 0:
-                boundingBox = self.get_boundingBox(adjs)
-                f.write('boundingBox : '
-                        + str(boundingBox) + "\n")    # for debug
-                self.collected_boxes.append(boundingBox)
-                f.write('self.collected_boxes : '
-                        + str(self.collected_boxes) + "\n")    # for debug
-
-        f.close()    # for debug
+        if debug:
+            with open(outdir + '/collect_boxes_debug_output.txt', 'w') as f:
+                while len(self.boxes) > 0:
+                    f.write('self.boxes: ' + str(len(self.boxes)) + "\n")
+                    abox = self.boxes.pop()
+                    f.write('abox : ' + str(abox) + "\n")
+                    adjs = self.get_adj_boxes(self.boxes, abox)
+                    f.write('adjs : ' + str(adjs) + "\n")
+                    for x in adjs:
+                        if x in self.boxes:
+                            self.boxes.remove(x)
+                    f.write('len of self.boxes after remove : '
+                            + str(len(self.boxes)) + "\n")
+                    f.write('self.boxes after remove: '
+                            + str(self.boxes) + "\n")
+                    adjs.append(abox)
+                    f.write('adjs after append: ' + str(adjs) + "\n")
+                    if len(adjs) > 0:
+                        boundingBox = self.get_boundingBox(adjs)
+                        f.write('boundingBox : '
+                                + str(boundingBox) + "\n")
+                        self.collected_boxes.append(boundingBox)
+                        f.write('self.collected_boxes : '
+                                + str(self.collected_boxes) + "\n")
+        else:
+            while len(self.boxes) > 0:
+                abox = self.boxes.pop()
+                adjs = self.get_adj_boxes(self.boxes, abox)
+                for x in adjs:
+                    if x in self.boxes:
+                        self.boxes.remove(x)
+                adjs.append(abox)
+                if len(adjs) > 0:
+                    boundingBox = self.get_boundingBox(adjs)
+                    self.collected_boxes.append(boundingBox)
 
     def write_collected_boxes_to_file(self, outdir=None):
         if not hasattr(self, 'collected_boxes'):

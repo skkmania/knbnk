@@ -7,7 +7,7 @@ from classes.knpage import KnPageParamsException
 from classes.knutil import *
 
 HOME_DIR = '/home/skkmania'
-DATA_DIR = HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data'
+DATA_DIR = HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data/twletters'
 box01 = (20, 30, 10, 10)
 box02 = (25, 35, 15, 15)
 box03 = (35, 45, 10, 10)
@@ -20,27 +20,6 @@ box13 = (135, 45, 10, 10)
 box14 = (135, 20, 20, 20)
 box15 = (110, 45, 20, 20)
 box16 = (127, 37, 10, 10)
-
-
-def pytest_funcarg__myfuncarg(request):
-        return 42
-
-
-def test_function(myfuncarg):
-        assert myfuncarg == 42
-
-
-def pytest_funcarg__kn(request):
-    img_fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
-    params_fname = DATA_DIR + '/twletters_01.json'
-    kn = KnPage(fname=img_fname, datadir=DATA_DIR, params=params_fname)
-    return kn
-
-
-def pytest_funcarg__kn2(request):
-    fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
-    params_file_name = DATA_DIR + '/twletters_01.json'
-    return KnPage(fname, params=params_file_name)
 
 
 class TestNew:
@@ -83,28 +62,10 @@ class TestTmpDir:
         assert sampleFile != '/tmp/pytest-skkmania/data/sample.jpeg'
 
 
-class TestGradients:
-    @pytest.mark.parametrize("idx", [1, 2, 3])
-    def test_write(elf, idx):
-        fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
-        paramfname = DATA_DIR + '/twletters_gradients_0' + str(idx) + '.json'
-        kn = KnPage(fname, datadir=DATA_DIR, params=paramfname)
-        kn.getGradients()
-        kn.write_gradients(DATA_DIR)
-
-    @pytest.mark.parametrize("idx", [1, 3, 5, 7])
-    def test_write_sobel(elf, idx):
-        fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
-        paramfname = DATA_DIR + '/twletters_sobel_k_' + str(idx) + '.json'
-        kn = KnPage(fname, datadir=DATA_DIR, params=paramfname)
-        kn.getGradients()
-        kn.write_gradients(DATA_DIR)
-
-
 class TestFileName:
     def test_mkFilename(self, kn):
         name = mkFilename(kn, '_cont')
-        expect = DATA_DIR + '/twl_can_50_200_cont.jpg'
+        expect = DATA_DIR + '/twl_can_50_200_hough_1_2_100_cont.jpg'
         assert name == expect
 
     def test_write_data_file(self, kn):
@@ -133,7 +94,7 @@ class TestBoundingRect:
         box03 = (35, 45, 10, 10)
         box04 = (35, 20, 20, 20)
         box05 = (10, 45, 20, 20)
-        fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
+        fname = DATA_DIR + '/twletters.jpg'
         params_fname = DATA_DIR + '/twletters_01.json'
         kn = KnPage(fname=fname, datadir=DATA_DIR, params=params_fname)
         assert kn.intersect(box01, box02)

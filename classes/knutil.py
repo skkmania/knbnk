@@ -1,11 +1,61 @@
 # -*- coding: utf-8 -*-
 import sys
-import numpy as np
-import cv2
 import json
 import os.path
+import knpage as kp
+import knkoma as kk
 
-__all__ = ["print_params_files", "check_test_environment", "mkFilename", "mkoutfilename"]
+__all__ = ["read_params", "print_params_files", "check_test_environment",
+           "mkFilename", "mkoutfilename",
+           "KnUtilException", "KnUtilParamsException"]
+
+DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data'
+
+
+class KnUtilException(Exception):
+    def __init__(self, value):
+        if value is None:
+            self.initException()
+        else:
+            self.value = value
+
+    def __str__(self):
+        return repr(self.value)
+
+    def printException(self):
+        print "KnUtil Exception."
+
+    @classmethod
+    def paramsFileNotFound(self, value):
+        print '%s not found.' % value
+
+    @classmethod
+    def initException(self):
+        print "parameter file name must be specified."
+
+
+class KnUtilParamsException(Exception):
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return repr(self.value)
+
+
+def read_params(obj, params):
+    with open(params) as f:
+        lines = f.readlines()
+    obj.parameters = json.loads(''.join(lines))
+    try:
+        if isinstance(obj, (kp.KnPage, kk.KnKoma)):
+            obj.imgfname = obj.parameters['imgfname']
+            obj.outfilename = obj.parameters['outfilename']
+        obj.outdir = obj.parameters['outdir']
+        obj.paramfname = obj.parameters['paramfname']
+    except KeyError as e:
+        msg = 'key : %s must be in parameter file' % str(e)
+        print msg
+        raise KnUtilParamsException(msg)
 
 
 def print_params_files(params_list):

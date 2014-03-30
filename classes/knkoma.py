@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# params_file :  parameterをjson形式であらわしたテキストファイルboundingRectの大きさ指定
+# params_file :  parameterをjson形式であらわしたテキストファイル
 # params_file の書式 :  json text
 #     注意：commaの有無
 #      文字列のquotation 数字、配列以外は文字列なので""でくくること
@@ -71,7 +71,9 @@ import cv2
 import json
 import os.path
 #from operator import itemgetter, attrgetter
-from .knutil import mkFilename
+from .knutil import *
+
+__all__ = ["KnKoma", "KnKomaException", "KnKomaParamsException"]
 
 
 class KnKomaException(Exception):
@@ -111,25 +113,25 @@ class KnKoma:
             raise KnKomaException('params is None')
 
         if os.path.exists(params):
-            self.read_params(params)
+            read_params(self, params)
             self.get_img()
         else:
             raise KnKomaParamsException(params)
             # raise KnKomaException.paramsFileNotFound(params)
 
-    def read_params(self, params):
-        with open(params) as f:
-            lines = f.readlines()
-        self.parameters = json.loads(''.join(lines))
-        try:
-            self.imgfname = self.parameters['imgfname']
-            self.outdir = self.parameters['outdir']
-            self.paramfname = self.parameters['paramfname']
-        except KeyError as e:
-            msg = 'key : %s must be in parameter file' % str(e)
-            print msg
-            raise KnKomaParamsException(msg)
-        self.outfilename = self.parameters['outfilename']
+#    def read_params(self, params):
+#        with open(params) as f:
+#            lines = f.readlines()
+#        self.parameters = json.loads(''.join(lines))
+#        try:
+#            self.imgfname = self.parameters['imgfname']
+#            self.outdir = self.parameters['outdir']
+#            self.paramfname = self.parameters['paramfname']
+#        except KeyError as e:
+#            msg = 'key : %s must be in parameter file' % str(e)
+#            print msg
+#            raise KnKomaParamsException(msg)
+#        self.outfilename = self.parameters['outfilename']
 
     def get_img(self):
         if os.path.exists(self.imgfname):

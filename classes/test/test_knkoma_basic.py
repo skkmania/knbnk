@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 import pytest
 import hamcrest as h
-from classes.knkoma import KnKoma
-from classes.knkoma import KnKomaException
-from classes.knkoma import KnKomaParamsException
-from classes.knutil import mkFilename
+from classes.knkoma import *
+from classes.knutil import *
 
 HOME_DIR = '/home/skkmania'
 DATA_DIR = HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data'
@@ -31,15 +29,15 @@ def test_function(myfuncarg):
 
 
 def pytest_funcarg__kn(request):
-    img_fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
-    params_fname = DATA_DIR + '/twletters_01.json'
+    img_fname = DATA_DIR + '/twletters/twletters.jpg'
+    params_fname = DATA_DIR + '/twletters/twletters_01.json'
     kn = KnKoma(fname=img_fname, datadir=DATA_DIR, params=params_fname)
     return kn
 
 
 def pytest_funcarg__kn2(request):
-    fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
-    params_file_name = DATA_DIR + '/twletters_01.json'
+    fname = DATA_DIR + '/twletters/twletters.jpg'
+    params_file_name = DATA_DIR + '/twletters/twletters_01.json'
     return KnKoma(fname, params=params_file_name)
 
 
@@ -56,7 +54,7 @@ class TestNew:
         assert 'not_exist_file' in str(e)
 
     def test_initialize_with_imcomplete_param_file(self):
-        with pytest.raises(KnKomaParamsException) as e:
+        with pytest.raises(KnUtilParamsException) as e:
             KnKoma(params=DATA_DIR + '/imcomplete_sample.json')
         assert 'must be' in str(e)
 

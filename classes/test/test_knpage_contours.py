@@ -34,7 +34,30 @@ class TestContours:
         twl.write_original_with_contour_and_rect_file()
 
 
+class TestWriteBinarized:
+    def test_write_binarized_file(self, kn005):
+        kn005.write_binarized_file()
+
+
+class TestWriteContoursBoundingRect:
+    def test_write_contours_bounding_rect_to_file(self, kn005):
+        kn005.write_contours_bounding_rect_to_file()
+
+
+class TestCollectedBoxes:
+    """
+    注意!：対象がオリジナルのひとコマなため10分程度かかる
+    """
+    def test_collect_boxes(self, kn005):
+        kn005.collect_boxes()
+        kn005.write_collected_boxes_to_file()
+        kn005.write_original_with_collected_boxes_to_file()
+
+
 class TestWriteAll:
+    """
+    注意!：対象がオリジナルのひとコマなため15分程度かかる
+    """
     def test_write_all(self, kn005):
         kn005.write_all(DATA_DIR)
 
