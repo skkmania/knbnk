@@ -10,7 +10,6 @@
 #     以下は任意
 #   }
 import knkoma as kk
-import knpage as kp
 from .knutil import *
 import os.path
 import json
@@ -86,11 +85,13 @@ class KnBook:
             koma.divide(k)
 
     def mkKomaParam(self, komanum):
+        komanumstr = str(komanum).zfill(3)
         params = {}
+        params['komanumstr'] = komanumstr
         params['paramfname'] = self.parameters['outdir']\
-            + '/k_' + str(komanum).zfill(3) + '.json'
-        params['imgfname'] =  self.parameters['outdir'] + '/'\
-            + str(komanum).zfill(3) + '.jpeg'
+            + '/k_' + komanumstr + '.json'
+        params['imgfname'] = self.parameters['outdir'] + '/'\
+            + komanumstr + '.jpeg'
         params['outdir'] = self.parameters['outdir']
         params['outfilename'] = "auto"
         params['mode'] = "EXTERNAL"

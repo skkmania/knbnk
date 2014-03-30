@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import logging
 import pytest
 import os.path
 from classes.knkoma import *
@@ -25,5 +26,7 @@ class TestBook:
         assert os.path.exists(knbk1.parameters['outdir'] + '/k_001.json')
 
     def test_divide_pages(self, knbk1):
+        logging.basicConfig(filename=knbk1.parameters['logfilename'],
+                            level=logging.DEBUG)
         knbk1.read_metadata()
         knbk1.divide_pages()

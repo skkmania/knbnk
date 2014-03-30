@@ -115,11 +115,14 @@ class KnKoma:
 
         if os.path.exists(params):
             ku.read_params(self, params)
-            logging.basicConfig(filename=self.parameters['logfilename'],
-                                level=logging.DEBUG)
             self.get_img()
+            self.komanumstr = self.parameters['komanumstr']
+            self.logger = logging.getLogger(self.komanumstr)
         else:
             raise KnKomaParamsException(params)
+
+    def __exit__(self, type, value, traceback):
+        self.logger.debug('exit')
 
     def get_img(self):
         if os.path.exists(self.imgfname):
@@ -145,8 +148,8 @@ class KnKoma:
         minval, maxval, apertureSize = self.parameters['canny']
         maxval = int(0.9 * maxval)
         self.parameters['canny'] = [minval, maxval, apertureSize]
-        logging.debug('hough : %s' % str(self.parameters['hough']))
-        logging.debug('canny : %s' % str(self.parameters['canny']))
+        self.logger.debug('hough : %s' % str(self.parameters['hough']))
+        self.logger.debug('canny : %s' % str(self.parameters['canny']))
 
     def simply_divide_half(self):
         self.leftPage = self.img[:, :int(self.width / 2)]
@@ -154,36 +157,40 @@ class KnKoma:
         self.write_both_pages()
 
     def divide(self, komanum=None):
+        self.cornerLines = {}
         try_count = 0
         while try_count < 5:
             self.prepareForLines()
             self.getHoughLines()
             if self.lines is None:
-                try_count += 1
-                logging.debug('lines not found. try count : %d' % try_count)
+                self.logger.debug(
+                    'lines not found. try count : %d' % try_count)
                 self.changeParams(try_count)
+                try_count += 1
                 continue
-            if self.enoughLines():
+            elif self.enoughLines():
                 self.findCornerLines()
                 self.findCenterLine()
                 # self.verifyCornerLines()
                 break
             else:
-                try_count += 1
-                logging.debug('lines not enough. try count : %d' % try_count)
+                self.logger.debug(
+                    'lines not enough. try count : %d' % try_count)
                 self.changeParams(try_count)
+                try_count += 1
         else:
-            logging.debug('KnKoma#divide: retry over 5 times and gave up!')
-            self.simply_divide_half()
-            return False
+            self.logger.debug('KnKoma#divide: retry over 5 times and gave up!')
+            self.complement_corner_lines()
 
         self.originalCorner = {}
         for d in ['upper', 'lower', 'center', 'right', 'left']:
             self.originalCorner[d] = int(self.cornerLines[d][0] / self.scale)
 
         o = self.originalCorner
-        self.leftPage = self.img[o['upper']:o['lower'], o['left']:o['center']]
-        self.rightPage = self.img[o['upper']:o['lower'], o['center']:o['right']]
+        self.leftPage = self.img[o['upper']:o['lower'],
+                                 o['left']:o['center']]
+        self.rightPage = self.img[o['upper']:o['lower'],
+                                  o['center']:o['right']]
         self.write_both_pages()
 
     def write_both_pages(self):
@@ -293,7 +300,8 @@ class KnKoma:
         self.small_img = cv2.resize(self.img,
                                     (int(self.width * self.scale),
                                      int(self.height * self.scale)))
-        self.small_height, self.small_width, self.small_depth = self.small_img.shape
+        self.small_height, self.small_width, self.small_depth =\
+            self.small_img.shape
         self.small_img_gray = cv2.cvtColor(self.small_img, cv2.COLOR_BGR2GRAY)
         self.small_img_canny = cv2.Canny(self.small_img_gray,
                                          minval, maxval, apertureSize)
@@ -401,17 +409,22 @@ class KnKoma:
                     if self.small_zone[direction][0] < line[0] <\
                             self.small_zone[direction][1]:
                         self.candidates[direction].append(line)
-        logging.debug('direction : %s' % direction)
-        logging.debug('candidates: %s' % str(self.candidates[direction]))
+        self.logger.debug('direction : %s' % direction)
+        self.logger.debug('candidates: %s' % str(self.candidates[direction]))
         return len(self.candidates[direction]) > 0
 
     def makeSmallZone(self, levels=None):
+        """
+        cornerLinesは経験上画像の4辺から、この程度離れたところに存在している
+        はずだという数値
+        HoughLinesを取得したあと、cornerLinesを絞りこむために利用する。
+        """
         if levels is None:
-            levels = {'upper':  [0.03, 0.25],
-                      'lower':  [0.75, 0.97],
+            levels = {'upper':  [0.03, 0.1],
+                      'lower':  [0.9, 0.97],
                       'center': [0.45, 0.55],
-                      'left':   [0.03, 0.25],
-                      'right':  [0.75, 0.97]}
+                      'left':   [0.03, 0.1],
+                      'right':  [0.9, 0.97]}
         self.small_zone = {}
         for d in ['upper', 'lower']:
             self.small_zone[d] = [self.small_height * x for x in levels[d]]
@@ -419,25 +432,29 @@ class KnKoma:
             self.small_zone[d] = [self.small_width * x for x in levels[d]]
 
     def enoughLines(self):
-        logging.info('# of self.lines : %d' % len(self.lines))
+        self.logger.info('# of self.lines in %s : %s' %
+                         (self.komanumstr, len(self.lines)))
         if len(self.lines) < 5:
-            logging.debug('self.lines : %s' % str(self.lines))
+            self.logger.debug('self.lines : %s' % str(self.lines))
+            self.logger.debug('enoughLines returns *False*' +
+                              ' because this poor Lines')
             return False
         else:
             self.partitionLines()
             if len(self.horizLines) < 2 or len(self.vertLines) < 3:
-                logging.debug('self.horizLines : %s' % str(self.horizLines))
-                logging.debug('self.vertLines : %s' % str(self.vertLines))
-                logging.debug('enoughLines returns *False*' +
-                              ' because this poor (horiz|vert)Lines')
+                self.logger.debug(
+                    'self.horizLines : %s' % str(self.horizLines))
+                self.logger.debug('self.vertLines : %s' % str(self.vertLines))
+                self.logger.debug('enoughLines returns *False*' +
+                                  ' because this poor (horiz|vert)Lines')
                 return False
             else:
                 self.makeSmallZone()
                 # self.makeCandidates()  # for debug
-                for direction in ['upper', 'lower', 'center', 'right', 'left']:
-                    if not self.lineSeemsToExist(direction):
-                        logging.debug('enoughLines returns *False*' +
-                                      ' because this poor candidates')
+                for d in ['upper', 'lower', 'center', 'right', 'left']:
+                    if not self.lineSeemsToExist(d):
+                        self.logger.debug('enoughLines returns *False*' +
+                                          ' because %s has 0 candidates' % d)
                         return False
         return True
 
@@ -453,6 +470,8 @@ class KnKoma:
                 return lines[-1]
 
     def findCenterLine(self):
+        self.logger.debug('entered in findCenterLine:')
+        self.logger.debug(str(self.cornerLines))
         diffOfPageWidth = lambda (left, center, right):\
             abs((right[0] - center[0]) - (center[0] - left[0]))
         tuplesOfVertLines =\
@@ -461,18 +480,44 @@ class KnKoma:
                                      self.candidates['right']),
                    key=diffOfPageWidth)
         self.cornerLines['center'] = tuplesOfVertLines[0][1]
+        self.logger.debug('just before exitting findCenterLine:')
+        self.logger.debug(str(self.cornerLines))
 
     def findCornerLines(self):
-        self.cornerLines = {}
+        self.logger.debug('entered in findCornerLines:')
+        self.logger.debug(str(self.cornerLines))
         for (d, w) in [('upper', 'min'), ('lower', 'max'),
                        ('left', 'min'), ('right', 'max')]:
             lines = self.candidates[d]
             if len(lines) == 0:
-                raise
+                pass
             elif len(lines) == 1:
                 self.cornerLines[d] = lines[0]
             else:
                 self.cornerLines[d] = self.selectLine(w, lines)
+        self.logger.debug('just before exitting findCornerLines:')
+        self.logger.debug(str(self.cornerLines))
+
+    def complement_corner_lines(self):
+        half_pi = 1.5707963705062866
+        self.logger.debug('entered in complement_corner_lines:')
+        self.logger.debug(str(self.cornerLines))
+        self.findCornerLines()
+        for d in ['upper', 'lower', 'left', 'right']:
+            if (not (d in self.candidates)) or (len(self.candidates[d]) == 0):
+                if d == 'upper':
+                    self.cornerLines[d] = [
+                        int(self.small_height * 0.15), half_pi]
+                elif d == 'lower':
+                    self.cornerLines[d] = [
+                        int(self.small_height * 0.9), half_pi]
+                elif d == 'left':
+                    self.cornerLines[d] = [int(self.small_width * 0.1), 0]
+                elif d == 'right':
+                    self.cornerLines[d] = [int(self.small_width * 0.9), 0]
+        self.cornerLines['center'] = [int(self.small_width * 0.5), 0]
+        self.logger.debug('just before exitting complement_corner_lines:')
+        self.logger.debug(str(self.cornerLines))
 
     def findCornerLineP(self):
         a = self.linePoints
