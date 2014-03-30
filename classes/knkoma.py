@@ -63,6 +63,7 @@
 #      出力4 :  contourのみを書いたファイル
 #      出力5 :  contourとそのboundingRectを重ね書きしたファイル
 
+import logging
 import sys
 import numpy as np
 import itertools
@@ -114,24 +115,11 @@ class KnKoma:
 
         if os.path.exists(params):
             ku.read_params(self, params)
+            logging.basicConfig(filename=self.parameters['logfilename'],
+                                level=logging.DEBUG)
             self.get_img()
         else:
             raise KnKomaParamsException(params)
-            # raise KnKomaException.paramsFileNotFound(params)
-
-#    def read_params(self, params):
-#        with open(params) as f:
-#            lines = f.readlines()
-#        self.parameters = json.loads(''.join(lines))
-#        try:
-#            self.imgfname = self.parameters['imgfname']
-#            self.outdir = self.parameters['outdir']
-#            self.paramfname = self.parameters['paramfname']
-#        except KeyError as e:
-#            msg = 'key : %s must be in parameter file' % str(e)
-#            print msg
-#            raise KnKomaParamsException(msg)
-#        self.outfilename = self.parameters['outfilename']
 
     def get_img(self):
         if os.path.exists(self.imgfname):
@@ -149,17 +137,46 @@ class KnKoma:
         else:
             raise KnKomaException('%s not found' % self.imgfname)
 
-    def divide(self):
-        self.prepareForLines()
-        self.getHoughLines()
-        if self.lines is None:
-            return False
-        if self.enoughLines():
-            self.findCornerLines()
-            self.findCenterLine()
-            # self.verifyCornerLines()
+    def changeParams(self, cnt):
+        rho, theta, minimumVote = self.parameters['hough']
+        minimumVote = int(0.9 * minimumVote)
+        self.parameters['hough'] = [rho, theta, minimumVote]
+
+        minval, maxval, apertureSize = self.parameters['canny']
+        maxval = int(0.9 * maxval)
+        self.parameters['canny'] = [minval, maxval, apertureSize]
+        logging.debug('hough : %s' % str(self.parameters['hough']))
+        logging.debug('canny : %s' % str(self.parameters['canny']))
+
+    def simply_divide_half(self):
+        self.leftPage = self.img[:, :int(self.width / 2)]
+        self.rightPage = self.img[:, int(self.width / 2):]
+        self.write_both_pages()
+
+    def divide(self, komanum=None):
+        try_count = 0
+        while try_count < 5:
+            self.prepareForLines()
+            self.getHoughLines()
+            if self.lines is None:
+                try_count += 1
+                logging.debug('lines not found. try count : %d' % try_count)
+                self.changeParams(try_count)
+                continue
+            if self.enoughLines():
+                self.findCornerLines()
+                self.findCenterLine()
+                # self.verifyCornerLines()
+                break
+            else:
+                try_count += 1
+                logging.debug('lines not enough. try count : %d' % try_count)
+                self.changeParams(try_count)
         else:
+            logging.debug('KnKoma#divide: retry over 5 times and gave up!')
+            self.simply_divide_half()
             return False
+
         self.originalCorner = {}
         for d in ['upper', 'lower', 'center', 'right', 'left']:
             self.originalCorner[d] = int(self.cornerLines[d][0] / self.scale)
@@ -167,9 +184,13 @@ class KnKoma:
         o = self.originalCorner
         self.leftPage = self.img[o['upper']:o['lower'], o['left']:o['center']]
         self.rightPage = self.img[o['upper']:o['lower'], o['center']:o['right']]
+        self.write_both_pages()
 
-        self.write(ku.mkFilename(self, fix='_left', ext='.jpeg'), self.leftPage)
-        self.write(ku.mkFilename(self, fix='_right', ext='.jpeg'), self.rightPage)
+    def write_both_pages(self):
+        self.write(ku.mkFilename(self, fix='_left', ext='.jpeg'),
+                   self.leftPage)
+        self.write(ku.mkFilename(self, fix='_right', ext='.jpeg'),
+                   self.rightPage)
 
     def write(self, outfilename=None, om=None):
         if om is None:
@@ -380,6 +401,8 @@ class KnKoma:
                     if self.small_zone[direction][0] < line[0] <\
                             self.small_zone[direction][1]:
                         self.candidates[direction].append(line)
+        logging.debug('direction : %s' % direction)
+        logging.debug('candidates: %s' % str(self.candidates[direction]))
         return len(self.candidates[direction]) > 0
 
     def makeSmallZone(self, levels=None):
@@ -396,17 +419,25 @@ class KnKoma:
             self.small_zone[d] = [self.small_width * x for x in levels[d]]
 
     def enoughLines(self):
+        logging.info('# of self.lines : %d' % len(self.lines))
         if len(self.lines) < 5:
+            logging.debug('self.lines : %s' % str(self.lines))
             return False
         else:
             self.partitionLines()
             if len(self.horizLines) < 2 or len(self.vertLines) < 3:
+                logging.debug('self.horizLines : %s' % str(self.horizLines))
+                logging.debug('self.vertLines : %s' % str(self.vertLines))
+                logging.debug('enoughLines returns *False*' +
+                              ' because this poor (horiz|vert)Lines')
                 return False
             else:
                 self.makeSmallZone()
                 # self.makeCandidates()  # for debug
                 for direction in ['upper', 'lower', 'center', 'right', 'left']:
                     if not self.lineSeemsToExist(direction):
+                        logging.debug('enoughLines returns *False*' +
+                                      ' because this poor candidates')
                         return False
         return True
 

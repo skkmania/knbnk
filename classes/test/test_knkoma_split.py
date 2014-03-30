@@ -335,6 +335,33 @@ class TestGetHoughLines:
         assert len(kns.lines) > 0
 
 
+class TestEnoughLinesFailure:
+    def pytest_funcarg__kns(self, request):
+        bookId = '1091460'
+        self.data_dir = DATA_DIR + '/' + bookId
+        params = {
+            "scale_size": 640.0,
+            "boundingRect": [16, 32],
+            "imgfname": self.data_dir + '/001.jpeg',
+            "outfilename": "hough_1_2_100_001",
+            "mode": "EXTERNAL",
+            "canny": [50, 150, 3],
+            "hough": [1, 2, 50],
+            "paramfname": self.data_dir + '/hough_1_2_100.json',
+            "method": "NONE",
+            "outdir": self.data_dir
+        }
+        check_test_environment(params, bookId)
+        return KnKoma(params=params['paramfname'])
+
+    def test_prepareForLines(self, kns):
+        kns.prepareForLines()
+
+    def test_getHoughLines(self, kns):
+        kns.prepareForLines()
+        kns.getHoughLines()
+        assert kns.enoughLines() is False
+
 class TestSelectLine:
     def test_selectLine(self, knManyLines):
         knManyLines.prepareForLines()
@@ -348,6 +375,13 @@ class TestDivide:
         knManyLines.divide()
         assert knManyLines.leftPage is not None
         assert knManyLines.rightPage is not None
+
+
+class TestDivideFailure:
+    def test_divide(self, knFewLines):
+        knFewLines.divide()
+        assert knFewLines.leftPage is not None
+        assert knFewLines.rightPage is not None
 
 
 class TestEnoughLines:

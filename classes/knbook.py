@@ -83,7 +83,7 @@ class KnBook:
     def divide_pages(self):
         for k in range(1, self.komanum + 1):
             koma = kk.KnKoma(params=self.mkKomaParam(k))
-            koma.divide()
+            koma.divide(k)
 
     def mkKomaParam(self, komanum):
         params = {}

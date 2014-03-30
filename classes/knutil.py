@@ -52,6 +52,7 @@ def read_params(obj, params):
             obj.outfilename = obj.parameters['outfilename']
         obj.outdir = obj.parameters['outdir']
         obj.paramfname = obj.parameters['paramfname']
+        obj.parameters['logfilename'] = obj.paramfname.replace('json', 'log')
     except KeyError as e:
         msg = 'key : %s must be in parameter file' % str(e)
         print msg
