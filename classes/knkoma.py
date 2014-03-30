@@ -71,7 +71,7 @@ import cv2
 import json
 import os.path
 #from operator import itemgetter, attrgetter
-from .knutil import *
+import knutil as ku
 
 __all__ = ["KnKoma", "KnKomaException", "KnKomaParamsException"]
 
@@ -113,7 +113,7 @@ class KnKoma:
             raise KnKomaException('params is None')
 
         if os.path.exists(params):
-            read_params(self, params)
+            ku.read_params(self, params)
             self.get_img()
         else:
             raise KnKomaParamsException(params)
@@ -152,12 +152,14 @@ class KnKoma:
     def divide(self):
         self.prepareForLines()
         self.getHoughLines()
+        if self.lines is None:
+            return False
         if self.enoughLines():
             self.findCornerLines()
             self.findCenterLine()
             # self.verifyCornerLines()
         else:
-            raise
+            return False
         self.originalCorner = {}
         for d in ['upper', 'lower', 'center', 'right', 'left']:
             self.originalCorner[d] = int(self.cornerLines[d][0] / self.scale)
@@ -166,8 +168,8 @@ class KnKoma:
         self.leftPage = self.img[o['upper']:o['lower'], o['left']:o['center']]
         self.rightPage = self.img[o['upper']:o['lower'], o['center']:o['right']]
 
-        self.write(mkFilename(self, fix='_left', ext='.jpeg'), self.leftPage)
-        self.write(mkFilename(self, fix='_right', ext='.jpeg'), self.rightPage)
+        self.write(ku.mkFilename(self, fix='_left', ext='.jpeg'), self.leftPage)
+        self.write(ku.mkFilename(self, fix='_right', ext='.jpeg'), self.rightPage)
 
     def write(self, outfilename=None, om=None):
         if om is None:
@@ -287,10 +289,14 @@ class KnKoma:
             また、後々の処理の便宜のため、numpyのarrayからpythonのlistに変換し、
             theta, rhoの順に2段のkeyにもとづきsortしておく。
         """
-        self.lines = cv2.HoughLines(self.small_img_canny,
-                                    self.rho, self.theta,
-                                    self.minimumVote)[0].tolist()
-        self.lines.sort(key=lambda x: (x[1], x[0]))
+        tmplines = cv2.HoughLines(self.small_img_canny,
+                                  self.rho, self.theta,
+                                  self.minimumVote)
+        if tmplines is not None:
+            self.lines = tmplines[0].tolist()
+            self.lines.sort(key=lambda x: (x[1], x[0]))
+        else:
+            self.lines = None
 
     def getHoughLinesP(self):
         self.linesP = cv2.HoughLinesP(self.small_img_canny,
@@ -465,9 +471,11 @@ class KnKoma:
     def write_lines_to_file(self, outdir):
         if not hasattr(self, 'lines'):
             self.getHoughLines()
+            if self.lines is None:
+                return False
         if not hasattr(self, 'linePoints'):
             self.getLinePoints()
-        outfilename = mkFilename(self, '_lines_data', outdir, ext='.txt')
+        outfilename = ku.mkFilename(self, '_lines_data', outdir, ext='.txt')
         with open(outfilename, 'w') as f:
             f.write("stat\n")
             f.write("len of lines : " + str(len(self.lines)) + "\n")
@@ -487,7 +495,7 @@ class KnKoma:
     def write_linesP_to_file(self, outdir):
         if not hasattr(self, 'linesP'):
             self.getHoughLinesP()
-        outfilename = mkFilename(self, '_linesP_data', outdir, ext='.txt')
+        outfilename = ku.mkFilename(self, '_linesP_data', outdir, ext='.txt')
         with open(outfilename, 'w') as f:
             f.write("stat\n")
             f.write("linesP\n")
@@ -508,7 +516,7 @@ class KnKoma:
     def write_gradients(self, outdir):
         for n in ['sobel', 'scharr', 'laplacian']:
             if n in self.parameters:
-                outfilename = mkFilename(self, '_' + n, outdir)
+                outfilename = ku.mkFilename(self, '_' + n, outdir)
                 img = getattr(self, 'gradients_' + n)
                 cv2.imwrite(outfilename, img)
 
@@ -528,25 +536,25 @@ class KnKoma:
                      pt1, pt2, (0, 0, 255), 2)
 
     def write_small_img(self, outdir=None):
-        outfilename = mkFilename(self, '_small_img', outdir)
+        outfilename = ku.mkFilename(self, '_small_img', outdir)
         cv2.imwrite(outfilename, self.small_img)
-        outfilename = mkFilename(self, '_small_img_gray', outdir)
+        outfilename = ku.mkFilename(self, '_small_img_gray', outdir)
         cv2.imwrite(outfilename, self.small_img_gray)
-        outfilename = mkFilename(self, '_small_img_canny', outdir)
+        outfilename = ku.mkFilename(self, '_small_img_canny', outdir)
         cv2.imwrite(outfilename, self.small_img_canny)
 
     def write_small_img_with_lines(self, outdir=None):
-        outfilename = mkFilename(self, '_small_img_with_lines', outdir)
+        outfilename = ku.mkFilename(self, '_small_img_with_lines', outdir)
         cv2.imwrite(outfilename, self.small_img_with_lines)
 
     def write_small_img_with_linesP(self, outdir=None):
-        outfilename = mkFilename(self, '_small_img_with_linesP', outdir)
+        outfilename = ku.mkFilename(self, '_small_img_with_linesP', outdir)
         cv2.imwrite(outfilename, self.small_img_with_linesP)
 
     def write_data_file(self, outdir=None):
         if not hasattr(self, 'contours'):
             self.getContours()
-        outfilename = mkFilename(self, 'data', outdir)
+        outfilename = ku.mkFilename(self, 'data', outdir)
         with open(outfilename, 'w') as f:
             f.write("contours\n")
             for cnt in self.contours:
@@ -561,7 +569,7 @@ class KnKoma:
     def write_binarized_file(self, outdir=None):
         if not hasattr(self, 'contours'):
             self.getContours()
-        outfilename = mkFilename(self, '_binarized', outdir)
+        outfilename = ku.mkFilename(self, '_binarized', outdir)
         self.write(outfilename, self.binarized)
 
     def include(self, box1, box2):

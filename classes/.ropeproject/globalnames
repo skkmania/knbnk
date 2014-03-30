@@ -13,5 +13,5 @@ SRC_SAMPLEqpUedit_parms_fileqqU#TestGetHoughLinesWithParamGeneratorqrUTestChec
 TestDivideqUgenerate_optsqUTestSmallImagePqU
 SRC_SAMPLEqU
 TestTmpDirq‘Uedit_parms_fileq’U#TestGetHoughLinesWithParamGeneratorq“UTestEnoughLinesq”Upytest_funcarg__knq•U
-TestParamsq–Uprint_params_filesq—Upytest_funcarg__knFewLinesq˜eUknbook]q™(UKnBookParamsExceptionqšhUKnBookq›UKnBookExceptionqœeUknutil]q(UmkoutfilenameqhUKnUtilParamsExceptionqŸUprint_params_filesq Ucheck_test_environmentq¡Uread_paramsq¢U
-mkFilenameq£UKnUtilExceptionq¤eUtest.test_knbook]q¥(UTestBookq¦heu.
+TestParamsq–Uprint_params_filesq—Upytest_funcarg__knFewLinesq˜eUknbook]q™(UKnBookParamsExceptionqšUDATA_DIRq›UKnBookExceptionqœUKnBookqeUknutil]q(UmkoutfilenameqŸh›UKnUtilParamsExceptionq Uprint_params_filesq¡Ucheck_test_environmentq¢Uread_paramsq£U
+mkFilenameq¤UKnUtilExceptionq¥eUtest.test_knbook]q¦(UTestBookq§h›eu.

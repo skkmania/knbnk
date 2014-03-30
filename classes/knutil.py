@@ -108,6 +108,8 @@ def mkFilename(obj, fix, outdir=None, ext=None):
 
         if hasattr(obj, 'outfilename'):
             name = obj.outfilename
+            if name == "auto":
+                name = mkoutfilename(obj.parameters)
         name = name + fix
 
     if outdir is None:
