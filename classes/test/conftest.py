@@ -2,6 +2,7 @@
 import os.path
 import pytest
 import json
+from classes.knparam import *
 from classes.knpage import *
 from classes.knkoma import *
 from classes.knbook import *
@@ -9,6 +10,58 @@ from classes.knutil import *
 
 DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data'
 
+
+def pytest_funcarg__knp(request):
+    bookId = '1091460'
+    params = {
+        "bookId":      "1091460",
+        "datadir":     '/home/skkmania/mnt2/workspace/pysrc/knbnk/data',
+        "paramfdir":   "/".join([DATA_DIR, bookId, "knbk1.json"]),
+        "workdir":     "/".join([DATA_DIR, bookId]),
+        "outdir":      "/".join([DATA_DIR, bookId]),
+        "paramfname":  "/".join([DATA_DIR, bookId, "knbk1.json"]),
+        "tmpl": {
+            "koma": {
+                "scale_size":   640.0,
+                "boundingRect": [16, 32],
+                "mode":         "EXTERNAL",
+                "method":       "NONE",
+                "hough":        [1, 2, 100],
+                "canny":        [50, 200, 3],
+                "imgfname":     "/".join([DATA_DIR, bookId, "t.jpeg"]),
+                "outdir":       "/".join([DATA_DIR, bookId]),
+                "paramfname":   "/".join([DATA_DIR, bookId, "twletters_01.json"]),
+                "outfilename":  "twl_can_50_200_hough_1_2_100"
+            },
+            "page": {
+            },
+            "layout": {
+            },
+            "char": {
+            }
+        },
+        "contents": {
+            "001": {
+                "imgfname":     "/".join([DATA_DIR, bookId, "001.jpeg"]),
+                "0": {
+                    "imgfname":     "/".join([DATA_DIR, bookId, "001_0.jpeg"]),
+                },
+                "1": {
+                    "imgfname":     "/".join([DATA_DIR, bookId, "001_1.jpeg"]),
+                },
+            },
+            "002": {
+                "0": {},
+                "1": {}
+            },
+            "003": {
+                "0": {},
+                "1": {}
+            }
+        }
+    }
+    check_test_environment(params, bookId)
+    return KnParam(param_fname=params['paramfname'])
 
 def pytest_funcarg__kn(request):
     bookId = 'twletters'

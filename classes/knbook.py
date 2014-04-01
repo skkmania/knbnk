@@ -10,6 +10,7 @@
 #     以下は任意
 #   }
 import knkoma as kk
+import knparam as kr
 from .knutil import *
 import os.path
 import json
@@ -49,32 +50,35 @@ class KnBookParamsException(Exception):
 
 
 class KnBook:
-    def __init__(self, fname=None, datadir=None, params=None, outdir=None):
-        if params is None:
-            raise KnBookException('params is None')
+    def __init__(self, param=None, param_fname=None):
+        if param is None and param_fname is None:
+            raise KnBookException('param or param_fname must be given.')
 
-        if os.path.exists(params):
-            read_params(self, params)
-            self.expand()
-            self.read_metadata()
-            self.komas = []
+        if  isinstance(param, kr.KnParam):
+            self.param = param
+        elif os.path.exists(param_fname):
+            self.param = kr.KnParam(param_fname)
         else:
-            raise KnBookParamsException(params)
-            # raise KnBookException.paramsFileNotFound(params)
+            raise KnBookparam_fnameException(param_fname)
+        self.expand()
+        self.read_metadata()
+        self.komas = []
 
     def expand(self):
-        if not os.path.exists(self.parameters['outdir']):
+        if not os.path.exists(self.param.outdir()):
             cmd = 'tar jxf %s/%s.tar.bz2 -C %s' % (
-                DATA_DIR, self.parameter['bookId'], DATA_DIR)
+                self.param.datadir(), self.param.bookId(),
+                self.param.workdir())
             os.system(cmd)
             cmd = "find %s -type d -name '*%s*' -exec mv {} %s \\;" %\
-                (DATA_DIR, self.parameter['bookId'], self.parameters["outdir"])
+                (self.param.datadir(), self.param.bookId(),
+                 self.param.workdir())
             os.system(cmd)
 
     def read_metadata(self):
-        self.metafname = (self.parameters['outdir']
-                          + '/raw_' + self.parameters['bookId'] + '.json')
-        if os.path.exists(self.parameters['outdir']):
+        self.metafname = (self.param.workdir()
+                          + '/raw_' + self.param.bookId() + '.json')
+        if os.path.exists(self.metafname):
             with open(self.metafname) as f:
                 lines = f.readlines()
                 self.metadata = json.loads(''.join(lines))
@@ -87,7 +91,7 @@ class KnBook:
         (なので、コマ数が少ないときだけ実行すること。)
         """
         for k in range(1, self.komanum + 1):
-            koma = kk.KnKoma(params=self.mkKomaParam(k))
+            koma = kk.KnKoma(params=self.param)
             koma.divide(k)
             self.komas.append(koma)
 
@@ -97,44 +101,8 @@ class KnBook:
         コマのObjectは保存しない。
         戻り値：KnPage objectのtuple(leftPage, rightPage)
         """
-        koma = kk.KnKoma(params=self.mkKomaParam(komanum))
-        return koma.divide(params=self.mkPageParam(komanum))
-
-    def mkPageParam(self, komanum):
-        komanumstr = str(komanum).zfill(3)
-        params = {}
-        params['komanumstr'] = komanumstr
-        params['paramfname'] = self.parameters['outdir']\
-            + '/k_' + komanumstr + '.json'
-        params['imgfname'] = self.parameters['outdir'] + '/'\
-            + komanumstr + '.jpeg'
-        params['outdir'] = self.parameters['outdir']
-        params['outfilename'] = "auto"
-        params['mode'] = "EXTERNAL"
-        params['method'] = "NONE"
-        params['hough'] = [1, 2, 100]
-        params['canny'] = [50, 200, 3]
-        params['scale_size'] = 640.0
-        print_params_files([params])
-        return params['paramfname']
-
-    def mkKomaParam(self, komanum):
-        komanumstr = str(komanum).zfill(3)
-        params = {}
-        params['komanumstr'] = komanumstr
-        params['paramfname'] = self.parameters['outdir']\
-            + '/k_' + komanumstr + '.json'
-        params['imgfname'] = self.parameters['outdir'] + '/'\
-            + komanumstr + '.jpeg'
-        params['outdir'] = self.parameters['outdir']
-        params['outfilename'] = "auto"
-        params['mode'] = "EXTERNAL"
-        params['method'] = "NONE"
-        params['hough'] = [1, 2, 100]
-        params['canny'] = [50, 200, 3]
-        params['scale_size'] = 640.0
-        print_params_files([params])
-        return params['paramfname']
+        koma = kk.KnKoma(params=self.param, komanum=komanum)
+        return koma.divide()
 
     def collect_all(self):
         for k in self.komas:
