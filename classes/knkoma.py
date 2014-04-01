@@ -72,6 +72,7 @@ import cv2
 import json
 import os.path
 #from operator import itemgetter, attrgetter
+import knpage as kp
 import knutil as ku
 
 __all__ = ["KnKoma", "KnKomaException", "KnKomaParamsException"]
@@ -156,7 +157,12 @@ class KnKoma:
         self.rightPage = self.img[:, int(self.width / 2):]
         self.write_both_pages()
 
-    def divide(self, komanum=None):
+    def divide(self, params=None):
+        """
+        self.imgを分割しleftPage, rightPageを生成する
+        入力値: string : KnPage生成に必要なparameter file name
+        戻り値: KnPage objectのtuple (leftPageObj, rightPageObj)
+        """
         self.cornerLines = {}
         try_count = 0
         while try_count < 5:
@@ -192,6 +198,9 @@ class KnKoma:
         self.rightPage = self.img[o['upper']:o['lower'],
                                   o['center']:o['right']]
         self.write_both_pages()
+        self.leftPageObj = kp.KnPage(params=params, lr='left')
+        self.rightPageObj = kp.KnPage(params=params, lr='right')
+        return (self.leftPageObj, self.rightPageObj)
 
     def write_both_pages(self):
         self.write(ku.mkFilename(self, fix='_left', ext='.jpeg'),

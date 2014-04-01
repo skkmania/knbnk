@@ -57,6 +57,7 @@ class KnBook:
             read_params(self, params)
             self.expand()
             self.read_metadata()
+            self.komas = []
         else:
             raise KnBookParamsException(params)
             # raise KnBookException.paramsFileNotFound(params)
@@ -79,10 +80,43 @@ class KnBook:
                 self.metadata = json.loads(''.join(lines))
                 self.komanum = int(self.metadata['lastContentNo'])
 
-    def divide_pages(self):
+    def divide_all(self):
+        """
+        book内の全コマをdivideする
+        全コマのObjectをself.komasに保存する。
+        (なので、コマ数が少ないときだけ実行すること。)
+        """
         for k in range(1, self.komanum + 1):
             koma = kk.KnKoma(params=self.mkKomaParam(k))
             koma.divide(k)
+            self.komas.append(koma)
+
+    def divide_a_koma(self, komanum):
+        """
+        book内のコマのうち、komanumで指定した番号のコマをdivideする
+        コマのObjectは保存しない。
+        戻り値：KnPage objectのtuple(leftPage, rightPage)
+        """
+        koma = kk.KnKoma(params=self.mkKomaParam(komanum))
+        return koma.divide(params=self.mkPageParam(komanum))
+
+    def mkPageParam(self, komanum):
+        komanumstr = str(komanum).zfill(3)
+        params = {}
+        params['komanumstr'] = komanumstr
+        params['paramfname'] = self.parameters['outdir']\
+            + '/k_' + komanumstr + '.json'
+        params['imgfname'] = self.parameters['outdir'] + '/'\
+            + komanumstr + '.jpeg'
+        params['outdir'] = self.parameters['outdir']
+        params['outfilename'] = "auto"
+        params['mode'] = "EXTERNAL"
+        params['method'] = "NONE"
+        params['hough'] = [1, 2, 100]
+        params['canny'] = [50, 200, 3]
+        params['scale_size'] = 640.0
+        print_params_files([params])
+        return params['paramfname']
 
     def mkKomaParam(self, komanum):
         komanumstr = str(komanum).zfill(3)
@@ -101,3 +135,13 @@ class KnBook:
         params['scale_size'] = 640.0
         print_params_files([params])
         return params['paramfname']
+
+    def collect_all(self):
+        for k in self.komas:
+            for p in k.pages:
+                p.collect_boxes()
+
+    def layout_all(self):
+        for k in self.komas:
+            for p in k.pages:
+                p.layout_pages()

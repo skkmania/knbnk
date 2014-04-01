@@ -3,6 +3,7 @@ import numpy as np
 import cv2
 import json
 import os.path
+import logging
 #from operator import itemgetter, attrgetter
 from .knutil import *
 
@@ -42,12 +43,14 @@ class KnPageParamsException(Exception):
 
 class KnPage:
 
-    def __init__(self, fname=None, datadir=None, params=None, outdir=None):
+    def __init__(self, fname=None, datadir=None, params=None,
+                 outdir=None, img=None, lr=None):
         if params is None:
             raise KnPageException('params is None')
 
         if os.path.exists(params):
             self.read_params(params)
+            self.parameters['lr'] = lr
             self.get_img()
         else:
             raise KnPageParamsException(params)
