@@ -157,6 +157,11 @@ class KnKoma:
         self.rightPage = self.img[:, int(self.width / 2):]
         self.write_both_pages()
 
+    def isCenterAmbiguous(self):
+        return len(self.candidates['left']) > 0 and\
+            len(self.candidates['center']) > 0 and\
+            len(self.candidates['right']) > 0
+
     def divide(self, params=None):
         """
         self.imgを分割しleftPage, rightPageを生成する
@@ -176,7 +181,8 @@ class KnKoma:
                 continue
             elif self.enoughLines():
                 self.findCornerLines()
-                self.findCenterLine()
+                if self.isCenterAmbiguous():
+                    self.findCenterLine()
                 # self.verifyCornerLines()
                 break
             else:
@@ -481,6 +487,7 @@ class KnKoma:
     def findCenterLine(self):
         self.logger.debug('entered in findCenterLine:')
         self.logger.debug(str(self.cornerLines))
+        self.logger.debug(str(self.candidates))
         diffOfPageWidth = lambda (left, center, right):\
             abs((right[0] - center[0]) - (center[0] - left[0]))
         tuplesOfVertLines =\

@@ -2,7 +2,7 @@
 import pytest
 import hamcrest as h
 from classes.knkoma import *
-from classes.knutil import *
+import classes.knutil as ku
 
 HOME_DIR = '/home/skkmania'
 DATA_DIR = HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data'
@@ -29,7 +29,7 @@ def test_function(myfuncarg):
 
 
 def pytest_funcarg__kn(request):
-    img_fname = DATA_DIR + '/twletters/twletters.jpg'
+    img_fname = DATA_DIR + '/twletters/001.jpg'
     params_fname = DATA_DIR + '/twletters/twletters_01.json'
     kn = KnKoma(fname=img_fname, datadir=DATA_DIR, params=params_fname)
     return kn
@@ -54,7 +54,7 @@ class TestNew:
         assert 'not_exist_file' in str(e)
 
     def test_initialize_with_imcomplete_param_file(self):
-        with pytest.raises(KnUtilParamsException) as e:
+        with pytest.raises(ku.KnUtilParamsException) as e:
             KnKoma(params=DATA_DIR + '/imcomplete_sample.json')
         assert 'must be' in str(e)
 
@@ -75,12 +75,12 @@ class TestNew:
 class TestParams:
     def pytest_funcarg__kn(request):
         fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
-        paramfname = DATA_DIR + '/twletters_01.json'
+        paramfname = DATA_DIR + '/twletters/twletters_01.json'
         return KnKoma(fname, datadir=DATA_DIR, params=paramfname)
 
     def pytest_funcarg__kn2(request):
         fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
-        params_file_name = DATA_DIR + '/twletters_01.json'
+        params_file_name = DATA_DIR + '/twletters/twletters_01.json'
         return KnKoma(fname, params=params_file_name)
 
     def test_read_params(self, kn):
@@ -91,11 +91,11 @@ class TestParams:
           "method"       : "NONE",
           "canny"        : [50, 200]
         """
-        params = DATA_DIR + '/twletters_01.json'
-        kn.read_params(params)
+        params = DATA_DIR + '/twletters/twletters_01.json'
+        ku.read_params(kn, params)
         assert kn.parameters is not None
-        assert len(kn.parameters) == 10
-        assert kn.parameters['outfilename'] == "twl_can_50_200"
+        assert len(kn.parameters) == 12
+        assert kn.parameters['outfilename'] == "twl_can_50_200_hough_1_2_100"
         assert kn.parameters['boundingRect'] == [16, 32]
         assert kn.parameters['mode'] == "EXTERNAL"
         assert kn.parameters['method'] == "NONE"
@@ -131,25 +131,28 @@ class TestTmpDir:
 class TestGradients:
     @pytest.mark.parametrize("idx", [1, 2, 3])
     def test_write(elf, idx):
-        fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
-        paramfname = DATA_DIR + '/twletters_gradients_0' + str(idx) + '.json'
-        kn = KnKoma(fname, datadir=DATA_DIR, params=paramfname)
+        data_dir = DATA_DIR + '/twletters'
+        fname = data_dir + '/twletters.jpg'
+        paramfname = data_dir + '/twletters_gradients_0' + str(idx) + '.json'
+        kn = KnKoma(fname, datadir=data_dir, params=paramfname)
         kn.getGradients()
-        kn.write_gradients(DATA_DIR)
+        kn.write_gradients(data_dir)
 
     @pytest.mark.parametrize("idx", [1, 3, 5, 7])
     def test_write_sobel(elf, idx):
-        fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
-        paramfname = DATA_DIR + '/twletters_sobel_k_' + str(idx) + '.json'
-        kn = KnKoma(fname, datadir=DATA_DIR, params=paramfname)
+        data_dir = DATA_DIR + '/twletters'
+        fname = data_dir + '/twletters.jpg'
+        paramfname = data_dir + '/twletters_sobel_k_' + str(idx) + '.json'
+        kn = KnKoma(fname, datadir=data_dir, params=paramfname)
         kn.getGradients()
-        kn.write_gradients(DATA_DIR)
+        kn.write_gradients(data_dir)
 
 
 class TestFileName:
     def test_mkFilename(self, kn):
-        name = mkFilename(kn, '_cont')
-        expect = DATA_DIR + '/twl_can_50_200_cont.jpg'
+        data_dir = DATA_DIR + '/twletters'
+        name = ku.mkFilename(kn, '_cont')
+        expect = data_dir + '/twl_can_50_200_hough_1_2_100_cont.jpg'
         assert name == expect
 
     def test_write_data_file(self, kn):

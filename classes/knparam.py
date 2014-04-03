@@ -4,6 +4,8 @@ import json
 #import knkoma as kk
 __all__ = ["KnParam", "KnParamException", "KnParamParamsException"]
 
+MandatoryFields = ["paramfdir", "workdir", "outdir", "bookId"]
+
 
 class KnParamException(Exception):
     def __init__(self, value):
@@ -32,7 +34,10 @@ class KnParamParamsException(Exception):
         self.value = value
 
     def __str__(self):
-        return repr(self.value)
+        if self.value in MandatoryFields:
+            return repr("param file lacks %s." % self.value)
+        else:
+            return repr(self.value)
 
 
 class KnParam:
@@ -46,6 +51,8 @@ class KnParam:
             self.raw = json.loads(''.join(lines))
         else:
             raise KnParamParamsException(param_fname)
+
+        self.check_params()
 
     def datadir(self):
         """
@@ -94,6 +101,11 @@ class KnParam:
         params['scale_size'] = 640.0
         print_params_files([params])
         return params['paramfname']
+
+    def check_params(self):
+        for k in MandatoryFields:
+            if not k in self.raw.keys():
+                raise KnParamParamsException(k)
 
     def mkKomaParam(self, komanum):
         komanumstr = str(komanum).zfill(3)

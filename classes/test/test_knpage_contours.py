@@ -63,12 +63,16 @@ class TestWriteAll:
 
 
 class TestWriteAllForAllParams:
+    """
+    注意 所要時間 15分
+    """
     def test_write_all(self):
-        fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
+        data_dir = DATA_DIR + '/twletters'
+        fname = data_dir + '/twletters.jpg'
         for i in range(2, 9):
-            params_file_name = DATA_DIR + '/twletters_0' + str(i) + '.json'
-            kn = KnPage(fname, datadir=DATA_DIR, params=params_file_name)
-            kn.write_all(DATA_DIR)
+            params_file_name = data_dir + '/twletters_0' + str(i) + '.json'
+            kn = KnPage(fname, datadir=data_dir, params=params_file_name)
+            kn.write_all(data_dir)
 
 
 class TestWriteGradients:

@@ -5,7 +5,8 @@ from classes.knkoma import KnKomaException
 from classes.knutil import *
 
 HOME_DIR = '/home/skkmania'
-DATA_DIR = HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data'
+DATA_DIR = HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data/twletters'
+img_fname = DATA_DIR + '/twletters.jpg'
 box01 = (20, 30, 10, 10)
 box02 = (25, 35, 15, 15)
 box03 = (35, 45, 10, 10)
@@ -21,7 +22,6 @@ box16 = (127, 37, 10, 10)
 
 
 def pytest_funcarg__kn(request):
-    img_fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
     params_fname = DATA_DIR + '/twletters_01.json'
     kn = KnKoma(fname=img_fname, datadir=DATA_DIR, params=params_fname)
     return kn
@@ -52,7 +52,6 @@ class TestCompLine:
         ([(10, 1000), (50, 100)], [(7, 25), (35, 20)], 'v')
     ])
     def test_complLne_wrong_recognition(self, line0, line1, horv):
-        img_fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
         params_fname = DATA_DIR + '/twletters_01.json'
         kn = KnKoma(fname=img_fname, datadir=DATA_DIR, params=params_fname)
         with pytest.raises(KnKomaException) as e:
@@ -68,7 +67,6 @@ class TestCompLine:
         ([(10, 100), (50, 100)], [(7, 20), (35, 20)], 'h')
     ])
     def test_complLne_horizontal(self, line0, line1, horv):
-        img_fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
         params_fname = DATA_DIR + '/twletters_01.json'
         kn = KnKoma(fname=img_fname, datadir=DATA_DIR, params=params_fname)
         result = kn.compLine(line0, line1, horv)
@@ -83,7 +81,6 @@ class TestCompLine:
         ([(10, 100), (50, 100)], [(7, 20), (35, 20)], 'v')
     ])
     def test_complLne_vertical(self, line0, line1, horv):
-        img_fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
         params_fname = DATA_DIR + '/twletters_01.json'
         kn = KnKoma(fname=img_fname, datadir=DATA_DIR, params=params_fname)
         tr = lambda tup: (tup[1], tup[0])
@@ -105,7 +102,6 @@ class TestInterSection:
         [(10, 10), (10, 53)]
     ])
     def test_isVertical_truth(self, line):
-        img_fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
         params_fname = DATA_DIR + '/twletters_01.json'
         kn = KnKoma(fname=img_fname, datadir=DATA_DIR, params=params_fname)
         result = kn.isVertical(line)
@@ -118,7 +114,6 @@ class TestInterSection:
         [(10, 10), (50, 53)]
     ])
     def test_isVertical_false(self, line):
-        img_fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
         params_fname = DATA_DIR + '/twletters_01.json'
         kn = KnKoma(fname=img_fname, datadir=DATA_DIR, params=params_fname)
         result = kn.isVertical(line)
@@ -131,7 +126,6 @@ class TestInterSection:
         [(10, 53), (50, 53)]
     ])
     def test_isHorizontal_truth(self, line):
-        img_fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
         params_fname = DATA_DIR + '/twletters_01.json'
         kn = KnKoma(fname=img_fname, datadir=DATA_DIR, params=params_fname)
         result = kn.isHorizontal(line)
@@ -144,7 +138,6 @@ class TestInterSection:
         [(10, 10), (50, 53)]
     ])
     def test_isHorizontal_false(self, line):
-        img_fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
         params_fname = DATA_DIR + '/twletters_01.json'
         kn = KnKoma(fname=img_fname, datadir=DATA_DIR, params=params_fname)
         result = kn.isHorizontal(line)
@@ -157,7 +150,6 @@ class TestInterSection:
         ([(10, 10), (50, 53)], [(20, 20), (5, 2)])
     ])
     def test_isHorizontal_false2(self, line1, line2):
-        img_fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
         params_fname = DATA_DIR + '/twletters_01.json'
         kn = KnKoma(fname=img_fname, datadir=DATA_DIR, params=params_fname)
         result = kn.getIntersection(line1, line2)
@@ -170,7 +162,6 @@ class TestInterSection:
         ([(10, 10), (50, 50)], [(7, 2), (35, 10)])
     ])
     def test_getIntersection(self, line1, line2):
-        img_fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
         params_fname = DATA_DIR + '/twletters_01.json'
         kn = KnKoma(fname=img_fname, datadir=DATA_DIR, params=params_fname)
         result = kn.getIntersection(line1, line2)
@@ -186,7 +177,6 @@ class TestInterSection:
         ([(4, 2), (4, 4)], [(0, 4), (8, 0)])
     ])
     def test_getIntersection_with_vertical(self, line1, line2):
-        img_fname = '/home/skkmania/workspace/pysrc/knpage/data/twletters.jpg'
         params_fname = DATA_DIR + '/twletters_01.json'
         kn = KnKoma(fname=img_fname, datadir=DATA_DIR, params=params_fname)
         result = kn.getIntersection(line1, line2)
@@ -200,7 +190,7 @@ class TestInterSection:
 class TestFileName:
     def test_mkFilename(self, kn):
         name = mkFilename(kn, '_cont')
-        expect = DATA_DIR + '/twl_can_50_200_cont.jpg'
+        expect = DATA_DIR + '/twl_can_50_200_hough_1_2_100_cont.jpg'
         assert name == expect
 
     def test_write_data_file(self, kn):

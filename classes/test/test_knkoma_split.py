@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import logging
 import pytest
 import os
 import os.path
@@ -214,6 +215,7 @@ def edit_parms_file(pfbody=None, imfname=None, opts=None, data_dir=None):
             lines = f.readlines()
             params = json.loads(''.join(lines))
         params['imgfname'] = img_fname
+        params['komanumstr'] = imfname.split('.')[0]
         params['outfilename'] = DATA_DIR + '/' +\
             pfbody + '_' + imfname.split('.')[0]
         shutil.move(pfname, pfname + '.bak')
@@ -231,6 +233,7 @@ def edit_parms_file(pfbody=None, imfname=None, opts=None, data_dir=None):
 def pytest_funcarg__kn(request):
     params = {
         "scale_size": 640.0,
+        "komanumstr": "007",
         "boundingRect": [16, 32],
         "hough": [1, 2, 100],
         "imgfname": "/home/skkmania/mnt2/workspace/pysrc/knbnk/data/1123003/007.jpeg",
@@ -248,6 +251,7 @@ def pytest_funcarg__kn(request):
 def pytest_funcarg__knManyLines(request):
     params = {
         "scale_size": 320.0,
+        "komanumstr": "007",
         "boundingRect": [16, 32],
         "hough": [1, 2, 80],
         "imgfname": "/home/skkmania/mnt2/workspace/pysrc/knbnk/data/1142178/007.jpeg",
@@ -265,6 +269,7 @@ def pytest_funcarg__knManyLines(request):
 def pytest_funcarg__knFewLines(request):
     params = {
         "scale_size": 320.0,
+        "komanumstr": "006",
         "boundingRect": [16, 32],
         "hough": [1, 180, 200],
         "imgfname": "/home/skkmania/mnt2/workspace/pysrc/knbnk/data/1123003/006.jpeg",
@@ -284,6 +289,7 @@ class TestGetHoughLinesP:
         bookId = '1123003'
         data_dir = DATA_DIR + '/' + bookId
         params = {
+            "komanumstr": "007",
             "scale_size": 640.0,
             "boundingRect": [16, 32],
             "imgfname": data_dir + '/007.jpeg',
@@ -308,6 +314,7 @@ class TestGetHoughLines:
         self.data_dir = DATA_DIR + '/' + bookId
         params = {
             "scale_size": 640.0,
+            "komanumstr": "007",
             "boundingRect": [16, 32],
             "imgfname": self.data_dir + '/007.jpeg',
             "outfilename": "hough_1_2_100_007",
@@ -341,6 +348,7 @@ class TestEnoughLinesFailure:
         self.data_dir = DATA_DIR + '/' + bookId
         params = {
             "scale_size": 640.0,
+            "komanumstr": "007",
             "boundingRect": [16, 32],
             "imgfname": self.data_dir + '/001.jpeg',
             "outfilename": "hough_1_2_100_001",
@@ -367,19 +375,19 @@ class TestSelectLine:
         knManyLines.prepareForLines()
         knManyLines.getHoughLines()
         result = knManyLines.enoughLines()
-        assert result is True
+        assert result is False
 
 
 class TestDivide:
     def test_divide(self, knManyLines):
-        knManyLines.divide()
+        knManyLines.divide(params=knManyLines.parameters['paramfname'])
         assert knManyLines.leftPage is not None
         assert knManyLines.rightPage is not None
 
 
 class TestDivideFailure:
     def test_divide(self, knFewLines):
-        knFewLines.divide()
+        knFewLines.divide(params=knFewLines.parameters['paramfname'])
         assert knFewLines.leftPage is not None
         assert knFewLines.rightPage is not None
 
@@ -389,7 +397,7 @@ class TestEnoughLines:
         knManyLines.prepareForLines()
         knManyLines.getHoughLines()
         result = knManyLines.enoughLines()
-        assert result is True
+        assert result is False
 
     def test_enoughLines2(self, knFewLines):
         knFewLines.prepareForLines()
@@ -407,14 +415,17 @@ class TestEnoughLines:
 
 class TestFindCornerLines:
     def test_findCornerLines(self, knManyLines):
+        logging.basicConfig(level=logging.DEBUG)
         knManyLines.prepareForLines()
         knManyLines.getHoughLines()
         knManyLines.enoughLines()
+        knManyLines.divide(params=knManyLines.parameters['paramfname'])
         knManyLines.findCornerLines()
-        assert len(knManyLines.cornerLines) == 4
-        knManyLines.findCenterLine()
-        print str(knManyLines.cornerLines)
         assert len(knManyLines.cornerLines) == 5
+        if knManyLines.isCenterAmbiguous():
+            knManyLines.findCenterLine()
+            print str(knManyLines.cornerLines)
+            assert len(knManyLines.cornerLines) == 5
 
 
 class TestWriteSmallImage:
@@ -422,6 +433,7 @@ class TestWriteSmallImage:
         DATA_DIR = HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data/1123003'
         params = {
             "scale_size": 640.0,
+            "komanumstr": "007",
             "boundingRect": [16, 32],
             "imgfname": DATA_DIR + "/007.jpeg",
             "outfilename": DATA_DIR + "/hough_1_180_200_007",
@@ -490,6 +502,7 @@ class TestGetHoughLinesWithParamGenerator:
         src = {
             "scale_size": [480.0, 320.0],
             "boundingRect": [[16, 32]],
+            "komanumstr": ["001"],
             "imgfname": map(lambda x:
                             data_dir + '/' + ('%03d' % x) + '.jpeg',
                             range(11, 21)),

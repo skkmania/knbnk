@@ -16,7 +16,7 @@ def pytest_funcarg__knp(request):
     params = {
         "bookId":      "1091460",
         "datadir":     '/home/skkmania/mnt2/workspace/pysrc/knbnk/data',
-        "paramfdir":   "/".join([DATA_DIR, bookId, "knbk1.json"]),
+        "paramfdir":   "/".join([DATA_DIR, bookId]),
         "workdir":     "/".join([DATA_DIR, bookId]),
         "outdir":      "/".join([DATA_DIR, bookId]),
         "paramfname":  "/".join([DATA_DIR, bookId, "knbk1.json"]),
@@ -40,7 +40,7 @@ def pytest_funcarg__knp(request):
             "char": {
             }
         },
-        "contents": {
+        "spec": {
             "001": {
                 "imgfname":     "/".join([DATA_DIR, bookId, "001.jpeg"]),
                 "0": {
