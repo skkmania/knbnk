@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import sys
 import json
 import os.path
 import knpage as kp
@@ -69,7 +68,7 @@ def print_params_files(params_list):
     return ret
 
 
-def check_test_environment(params, bookId):
+def check_test_environment(param_dict, bookId):
     """
     paramsに記述されたoutdirの存在確認
       なければ、tarballの展開とoutdirの作成
@@ -77,14 +76,14 @@ def check_test_environment(params, bookId):
     (testのたびにそのtestの設定を使うこと。
     別のtestの影響を受けたくないので。)
     """
-    if not os.path.exists(params['outdir']):
+    if not os.path.exists(param_dict['outdir']):
         cmd = 'tar jxf %s/%s.tar.bz2 -C %s' % (DATA_DIR, bookId, DATA_DIR)
         os.system(cmd)
         cmd = "find %s -type d -name '*%s*' -exec mv {} %s \\;" %\
-            (DATA_DIR, bookId, params["outdir"])
+            (DATA_DIR, bookId, param_dict["outdir"])
         os.system(cmd)
 
-    print_params_files([params])
+    print_params_files([param_dict])
 
 
 def mkFilename(obj, fix, outdir=None, ext=None):

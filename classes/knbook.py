@@ -51,13 +51,14 @@ class KnBookParamsException(Exception):
 
 class KnBook:
     def __init__(self, param=None, param_fname=None):
+        print param_fname
         if param is None and param_fname is None:
             raise KnBookException('param or param_fname must be given.')
 
-        if  isinstance(param, kr.KnParam):
+        if isinstance(param, kr.KnParam):
             self.param = param
         elif os.path.exists(param_fname):
-            self.param = kr.KnParam(param_fname)
+            self.param = kr.KnParam(param_fname=param_fname)
         else:
             raise KnBookparam_fnameException(param_fname)
         self.expand()
@@ -91,7 +92,7 @@ class KnBook:
         (なので、コマ数が少ないときだけ実行すること。)
         """
         for k in range(1, self.komanum + 1):
-            koma = kk.KnKoma(params=self.param)
+            koma = kk.KnKoma(param=self.param)
             koma.divide(k)
             self.komas.append(koma)
 
@@ -101,7 +102,7 @@ class KnBook:
         コマのObjectは保存しない。
         戻り値：KnPage objectのtuple(leftPage, rightPage)
         """
-        koma = kk.KnKoma(params=self.param, komanum=komanum)
+        koma = kk.KnKoma(param=self.param, komanum=komanum)
         return koma.divide()
 
     def collect_all(self):

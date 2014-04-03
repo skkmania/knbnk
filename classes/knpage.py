@@ -43,21 +43,21 @@ class KnPageParamsException(Exception):
 
 class KnPage:
 
-    def __init__(self, fname=None, datadir=None, params=None,
+    def __init__(self, fname=None, datadir=None, param_fname=None,
                  outdir=None, img=None, lr=None):
-        if params is None:
-            raise KnPageException('params is None')
+        if param_fname is None:
+            raise KnPageException('param_fname is None')
 
-        if os.path.exists(params):
-            self.read_params(params)
+        if os.path.exists(param_fname):
+            self.read_params(param_fname)
             self.parameters['lr'] = lr
             self.get_img()
         else:
-            raise KnPageParamsException(params)
-            # raise KnPageException.paramsFileNotFound(params)
+            raise KnPageParamsException(param_fname)
+            # raise KnPageException.paramsFileNotFound(param_fname)
 
-    def read_params(self, params):
-        with open(params) as f:
+    def read_params(self, param_fname):
+        with open(param_fname) as f:
             lines = f.readlines()
         self.parameters = dict(json.loads(''.join(lines)))
         try:
@@ -523,4 +523,5 @@ class KnPage:
            (ay2 in range(by1 - ym, by2 + ym)):
             return True
 
+        import pdb; pdb.set_trace()  # XXX BREAKPOINT
         return False

@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
+import logging
 import os.path
 import json
+import knutil as ku
 #import knkoma as kk
 __all__ = ["KnParam", "KnParamException", "KnParamParamsException"]
 
-MandatoryFields = ["paramfdir", "workdir", "outdir", "bookId"]
+MandatoryFields = ["paramfdir", "workdir", "outdir", "bookId",
+                   "logfilename"]
 
 
 class KnParamException(Exception):
@@ -40,49 +43,79 @@ class KnParamParamsException(Exception):
             return repr(self.value)
 
 
-class KnParam:
-    def __init__(self, param=None, param_fname=None):
-        if param is None and param_fname is None:
-            raise KnParamException('must specify fname or params')
-
-        if os.path.exists(param_fname):
-            with open(param_fname) as f:
-                lines = f.readlines()
-            self.raw = json.loads(''.join(lines))
+class KnParam(dict):
+    def __init__(self, param_dict=None, param_fname=None):
+        dict.__init__(self)
+        if param_dict:
+            if isinstance(param_dict, dict):
+                for k in param_dict:
+                    self[k] = param_dict[k]
+            else:
+                raise KnParamParamsException('param_dict must be dict object.')
+        elif param_fname:
+            if isinstance(param_fname, str):
+                if os.path.exists(param_fname):
+                    with open(param_fname) as f:
+                        lines = f.readlines()
+                        j = json.loads(''.join(lines))
+                    for k in j:
+                        self[k] = j[k]
+                else:
+                    raise KnParamParamsException(param_fname + ' not found.')
+            else:
+                raise KnParamParamsException('param_fname must be string.')
         else:
-            raise KnParamParamsException(param_fname)
+            raise KnParamParamsException(
+                'param_dict or param_fname must be specified.')
 
-        self.check_params()
+        for k in MandatoryFields:
+            if not k in self.keys():
+                raise KnParamParamsException(k)
+
+        logging.basicConfig(filename=self['logfilename'])
+        self.logger = logging.getLogger(self['bookId'])
+        self.logger.warning(str(self))
+
+    def isBook(self):
+        """
+        KnBookのparameterとしての必要条件を満たすか判定
+        """
+        if not "book" in self.keys():
+            return False
+        elif not "id" in self['book'].keys():
+            return False
+        else:
+            return True
 
     def datadir(self):
         """
         出力: text : tarballが存在するdirectoryのfull path
         """
-        return self.raw['datadir']
+        return self['datadir']
 
     def paramfdir(self):
         """
         出力: text : parameter json fileが存在するdirectoryのfull path
         """
-        return self.raw['paramfdir']
+        return self['paramfdir']
 
     def workdir(self):
         """
         出力: text : tarballを展開し作成されるdirectoryのfull path
         """
-        return self.raw['workdir']
+        return self['workdir']
 
     def outdir(self):
         """
         出力: text : 最終成果物を出力する先のdirectoryのfull path
         """
-        return self.raw['outdir']
+        return self['outdir']
 
     def bookId(self):
         """
         出力: text : NDLの永続的識別子からとった数字の列
         """
-        return self.raw['bookId']
+        return self['bookId']
 
     def mkPageParam(self, komanum):
         komanumstr = str(komanum).zfill(3)
@@ -99,7 +132,7 @@ class KnParam:
         params['hough'] = [1, 2, 100]
         params['canny'] = [50, 200, 3]
         params['scale_size'] = 640.0
-        print_params_files([params])
+        ku.print_params_files([params])
         return params['paramfname']
 
     def check_params(self):
@@ -111,16 +144,16 @@ class KnParam:
         komanumstr = str(komanum).zfill(3)
         params = {}
         params['komanumstr'] = komanumstr
-        params['paramfname'] = self.parameters['outdir']\
+        params['paramfname'] = self.raw['outdir']\
             + '/k_' + komanumstr + '.json'
-        params['imgfname'] = self.parameters['outdir'] + '/'\
+        params['imgfname'] = self.raw['outdir'] + '/'\
             + komanumstr + '.jpeg'
-        params['outdir'] = self.parameters['outdir']
+        params['outdir'] = self.raw['outdir']
         params['outfilename'] = "auto"
         params['mode'] = "EXTERNAL"
         params['method'] = "NONE"
         params['hough'] = [1, 2, 100]
         params['canny'] = [50, 200, 3]
         params['scale_size'] = 640.0
-        print_params_files([params])
+        ku.print_params_files([params])
         return params['paramfname']

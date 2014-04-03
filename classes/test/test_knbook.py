@@ -17,16 +17,17 @@ class TestBook:
     def test_read_metadata(self, knbk1):
         knbk1.read_metadata()
         assert knbk1.metadata is not None
-        assert knbk1.metadata['id'] == knbk1.parameters['bookId']
+        assert knbk1.metadata['id'] == knbk1.param.bookId()
         assert knbk1.komanum == 10
 
     def test_mkKomaParam(self, knbk1):
         knbk1.read_metadata()
-        knbk1.mkKomaParam(1)
-        assert os.path.exists(knbk1.parameters['outdir'] + '/k_001.json')
+        knbk1.param.mkKomaParam(1)
+        assert os.path.exists(knbk1.param.outdir() + '/k_001.json')
 
-    def test_divide_pages(self, knbk1):
-        logging.basicConfig(filename=knbk1.parameters['logfilename'],
+    def test_divide_all(self, knbk1):
+        logging.basicConfig(filename=
+                            knbk1.param.workdir() + '/test_divide_all.log',
                             level=logging.DEBUG)
         knbk1.read_metadata()
-        knbk1.divide_pages()
+        knbk1.divide_all()

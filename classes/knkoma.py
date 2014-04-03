@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-# params_file :  parameterをjson形式であらわしたテキストファイル
-# params_file の書式 :  json text
+# param_fname file :  parameterをjson形式であらわしたテキストファイル
+# param_fname file の書式 :  json text
 #     注意：commaの有無
 #      文字列のquotation 数字、配列以外は文字列なので""でくくること
 #   {
@@ -69,9 +69,10 @@ import numpy as np
 import itertools
 
 import cv2
-import json
+#import json
 import os.path
 #from operator import itemgetter, attrgetter
+import knparam as kr
 import knpage as kp
 import knutil as ku
 
@@ -110,17 +111,17 @@ class KnKomaParamsException(Exception):
 
 class KnKoma:
 
-    def __init__(self, fname=None, datadir=None, params=None, outdir=None):
-        if params is None:
-            raise KnKomaException('params is None')
-
-        if os.path.exists(params):
-            ku.read_params(self, params)
+    def __init__(self, param):
+        if param is None:
+            raise KnKomaException('param must be specified.')
+        else:
+            if isinstance(param, kr.KnParam):
+                self.p = param
+            else:
+                raise KnKomaParamsException('param must be KnParam object')
             self.get_img()
             self.komanumstr = self.parameters['komanumstr']
             self.logger = logging.getLogger(self.komanumstr)
-        else:
-            raise KnKomaParamsException(params)
 
     def __exit__(self, type, value, traceback):
         self.logger.debug('exit')
@@ -141,7 +142,7 @@ class KnKoma:
         else:
             raise KnKomaException('%s not found' % self.imgfname)
 
-    def changeParams(self, cnt):
+    def changeparam_fname(self, cnt):
         rho, theta, minimumVote = self.parameters['hough']
         minimumVote = int(0.9 * minimumVote)
         self.parameters['hough'] = [rho, theta, minimumVote]
@@ -162,7 +163,7 @@ class KnKoma:
             len(self.candidates['center']) > 0 and\
             len(self.candidates['right']) > 0
 
-    def divide(self, params=None):
+    def divide(self, param_fname=None):
         """
         self.imgを分割しleftPage, rightPageを生成する
         入力値: string : KnPage生成に必要なparameter file name
@@ -176,7 +177,7 @@ class KnKoma:
             if self.lines is None:
                 self.logger.debug(
                     'lines not found. try count : %d' % try_count)
-                self.changeParams(try_count)
+                self.changeparam_fname(try_count)
                 try_count += 1
                 continue
             elif self.enoughLines():
@@ -188,7 +189,7 @@ class KnKoma:
             else:
                 self.logger.debug(
                     'lines not enough. try count : %d' % try_count)
-                self.changeParams(try_count)
+                self.changeparam_fname(try_count)
                 try_count += 1
         else:
             self.logger.debug('KnKoma#divide: retry over 5 times and gave up!')
@@ -204,8 +205,8 @@ class KnKoma:
         self.rightPage = self.img[o['upper']:o['lower'],
                                   o['center']:o['right']]
         self.write_both_pages()
-        self.leftPageObj = kp.KnPage(params=params, lr='left')
-        self.rightPageObj = kp.KnPage(params=params, lr='right')
+        self.leftPageObj = kp.KnPage(param_fname=param_fname, lr='left')
+        self.rightPageObj = kp.KnPage(param_fname=param_fname, lr='right')
         return (self.leftPageObj, self.rightPageObj)
 
     def write_both_pages(self):
@@ -295,7 +296,7 @@ class KnKoma:
                              cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
     def prepareForLines(self):
-        if 'scale_size' in self.parameters:
+        if 'scale_size' in self.parameters.raw:
             self.scale_size = self.parameters['scale_size']
             self.scale = self.scale_size / self.width
         else:
