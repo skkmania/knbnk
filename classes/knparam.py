@@ -1,13 +1,22 @@
 # -*- coding: utf-8 -*-
 import logging
+import copy
 import os.path
 import json
 import knutil as ku
+import knbook as kb
 #import knkoma as kk
 __all__ = ["KnParam", "KnParamException", "KnParamParamsException"]
 
-MandatoryFields = ["paramfdir", "workdir", "outdir", "bookId",
-                   "logfilename"]
+MandatoryFields = {
+    "param": ["arcdir", "paramfdir", "workdir", "outdir",
+              "paramfname", "logfilename", "balls"],
+    "book":  ["bookdir", "bookId"],
+    "koma":  ["komadir", "komaId", "komaIdStr",
+              "scale_size", "hough", "canny", "imgfname"],
+    "page":  ["pagedir", "imgfname", "lr", "boundingRect",
+              "mode", "method"]
+}
 
 
 class KnParamException(Exception):
@@ -46,35 +55,80 @@ class KnParamParamsException(Exception):
 class KnParam(dict):
     def __init__(self, param_dict=None, param_fname=None):
         dict.__init__(self)
-        if param_dict:
+        if param_dict is None and param_fname is None:
+            raise KnParamParamsException(
+                'param_dict or param_fname must be specified.')
+        elif param_dict:
             if isinstance(param_dict, dict):
                 for k in param_dict:
                     self[k] = param_dict[k]
             else:
                 raise KnParamParamsException('param_dict must be dict object.')
-        elif param_fname:
+        else:
             if isinstance(param_fname, str):
-                if os.path.exists(param_fname):
-                    with open(param_fname) as f:
-                        lines = f.readlines()
-                        j = json.loads(''.join(lines))
-                    for k in j:
-                        self[k] = j[k]
-                else:
-                    raise KnParamParamsException(param_fname + ' not found.')
+                self.read_paramf(param_fname)
             else:
                 raise KnParamParamsException('param_fname must be string.')
-        else:
-            raise KnParamParamsException(
-                'param_dict or param_fname must be specified.')
 
-        for k in MandatoryFields:
+        self.mandatory_check()
+
+        logging.basicConfig(filename=self['param']['logfilename'],
+                            level=logging.DEBUG,
+                            format='%(asctime)s %(message)s',
+                            datefmt='%m/%d/%Y %I:%M:%S %p')
+        self.logger = logging.getLogger(self['book']['bookId'])
+        self.logger.warning(str(self))
+
+    def read_paramf(self, param_fname):
+        if os.path.exists(param_fname):
+            with open(param_fname) as f:
+                lines = f.readlines()
+                j = json.loads(''.join(lines))
+            for k in j:
+                self[k] = j[k]
+        else:
+            raise KnParamParamsException(param_fname + ' not found.')
+
+    def mandatory_check(self):
+        for k, v in MandatoryFields.items():
             if not k in self.keys():
                 raise KnParamParamsException(k)
+            else:
+                for f in v:
+                    if not f in self[k].keys():
+                        raise KnParamParamsException(f)
 
-        logging.basicConfig(filename=self['logfilename'])
-        self.logger = logging.getLogger(self['bookId'])
-        self.logger.warning(str(self))
+    def clone(self):
+        tmp = {}
+        for k in self:
+            tmp[k] = copy.deepcopy(self[k])
+        return KnParam(tmp)
+
+    def start(self):
+        self.check_environment()
+        self.expand_tarballs()
+
+    def check_environment(self):
+        pass
+
+    def expand_tarballs(self):
+        for ball in self.ball_list():
+            self.logger.debug(ball)
+            p = self.clone_for_book(ball)
+            kb.KnBook(p).start()
+
+    def ball_list(self):
+        return self['param']["balls"]
+
+    def clone_for_book(self, ball):
+        """
+        自らをKnBookに渡すに当たって、対象のtarballやbookIdをトップレベルにもってくるなど
+        自らの中身を調整する
+        """
+        ret = self.clone()
+        ret['book']["bookdir"] = self['param']['workdir'] + '/' + ball
+        ret['book']["bookId"] = ball
+        return ret
 
     def isBook(self):
         """
@@ -91,31 +145,31 @@ class KnParam(dict):
         """
         出力: text : tarballが存在するdirectoryのfull path
         """
-        return self['datadir']
+        return self['param']['datadir']
 
     def paramfdir(self):
         """
         出力: text : parameter json fileが存在するdirectoryのfull path
         """
-        return self['paramfdir']
+        return self['param']['paramfdir']
 
     def workdir(self):
         """
         出力: text : tarballを展開し作成されるdirectoryのfull path
         """
-        return self['workdir']
+        return self['param']['workdir']
 
     def outdir(self):
         """
         出力: text : 最終成果物を出力する先のdirectoryのfull path
         """
-        return self['outdir']
+        return self['param']['outdir']
 
     def bookId(self):
         """
         出力: text : NDLの永続的識別子からとった数字の列
         """
-        return self['bookId']
+        return self['book']['bookId']
 
     def mkPageParam(self, komanum):
         komanumstr = str(komanum).zfill(3)
@@ -141,14 +195,17 @@ class KnParam(dict):
                 raise KnParamParamsException(k)
 
     def mkKomaParam(self, komanum):
-        komanumstr = str(komanum).zfill(3)
+        if komanum < 1000:
+            komanumstr = str(komanum).zfill(3)
+        else:
+            komanumstr = str(komanum).zfill(4)
         params = {}
         params['komanumstr'] = komanumstr
-        params['paramfname'] = self.raw['outdir']\
+        params['paramfname'] = self['param']['outdir']\
             + '/k_' + komanumstr + '.json'
-        params['imgfname'] = self.raw['outdir'] + '/'\
+        params['imgfname'] = self['param']['outdir'] + '/'\
             + komanumstr + '.jpeg'
-        params['outdir'] = self.raw['outdir']
+        params['outdir'] = self['param']['outdir']
         params['outfilename'] = "auto"
         params['mode'] = "EXTERNAL"
         params['method'] = "NONE"
@@ -156,4 +213,52 @@ class KnParam(dict):
         params['canny'] = [50, 200, 3]
         params['scale_size'] = 640.0
         ku.print_params_files([params])
-        return params['paramfname']
+        return params['param']['paramfname']
+
+    def get_numOfKoma(self):
+        return self['book']['numOfKoma']
+
+    def set_numOfKoma(self, n):
+        self['book']['numOfKoma'] = n
+
+    def get_komaIdStr(self):
+        return self['koma']['komaIdStr']
+
+    def set_komaId(self, current, last):
+        if last < 1000:
+            komaIdStr = str(current).zfill(3)
+        else:
+            komaIdStr = str(current).zfill(4)
+        self['koma']['komaIdStr'] = komaIdStr
+        self['koma']['komaId'] = current
+        return komaIdStr
+
+    def get_imgfname(self):
+        if 'imgfname' in self['koma']:
+            return self['koma']['imgfname']
+        else:
+            return self['koma']['imgfname']
+
+    def set_imgfname(self, current, last):
+        if last < 1000:
+            komaIdStr = str(current).zfill(3)
+        else:
+            komaIdStr = str(current).zfill(4)
+        self['koma']['imgfname'] = "/".join(
+            [self['param']['workdir'], 'k' + komaIdStr, komaIdStr + ".jpeg"])
+
+    def set_lr(self, lr):
+        self['page']['lr'] = lr
+
+    def lrstr(self):
+        return self['page']['lr']
+
+    def clone_for_page(self, page):
+        ret = self.clone()
+        ret['page'].update(page)
+        return ret
+
+    def clone_for_koma(self, koma):
+        ret = self.clone()
+        ret['koma'].update(koma)
+        return ret

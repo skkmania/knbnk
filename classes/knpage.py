@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import cv2
-import json
+#import json
 import os.path
 import logging
 #from operator import itemgetter, attrgetter
-from .knutil import *
+import knutil as ku
+import knparam as kr
 
 
 __all__ = ['KnPage', 'KnPageException', 'KnPageParamsException']
@@ -42,40 +43,29 @@ class KnPageParamsException(Exception):
 
 
 class KnPage:
-
-    def __init__(self, fname=None, datadir=None, param_fname=None,
-                 outdir=None, img=None, lr=None):
-        if param_fname is None:
-            raise KnPageException('param_fname is None')
-
-        if os.path.exists(param_fname):
-            self.read_params(param_fname)
-            self.parameters['lr'] = lr
+    def __init__(self, param):
+        if param is None:
+            raise KnPageException('param must be specified.')
+        else:
+            if isinstance(param, kr.KnParam):
+                self.p = param
+                self.parameters = param['page']
+            else:
+                raise KnPageParamsException('param must be KnParam object')
             self.get_img()
-        else:
-            raise KnPageParamsException(param_fname)
-            # raise KnPageException.paramsFileNotFound(param_fname)
+            self.lrstr = self.p.lrstr()
+            self.logger = logging.getLogger(self.lrstr)
 
-    def read_params(self, param_fname):
-        with open(param_fname) as f:
-            lines = f.readlines()
-        self.parameters = dict(json.loads(''.join(lines)))
-        try:
-            self.imgfname = self.parameters['imgfname']
-            self.outdir = self.parameters['outdir']
-            self.paramfname = self.parameters['paramfname']
-        except KeyError as e:
-            msg = 'key : %s must be in parameter file' % str(e)
-            print msg
-            raise KnPageParamsException(msg)
-        if 'outfilename' in self.parameters:
-            self.outfilename = self.parameters['outfilename']
-            if self.outfilename == "auto":
-                self.outfilename = mkoutfilename(self.parameters)
-        else:
-            self.outfilename = mkoutfilename(self.parameters)
+    def start(self):
+        #self.getChars()
+        #self.layoutChars()
+        self.getBinarized()
+        d = self.p['page']['pagedir']
+        self.write_original_with_collected_boxes_to_file(d)
+        pass
 
     def get_img(self):
+        self.imgfname = self.p['page']['imgfname']
         if os.path.exists(self.imgfname):
             self.img = cv2.imread(self.imgfname)
             if self.img is None:
@@ -90,16 +80,6 @@ class KnPage:
                 self.getBinarized()
         else:
             raise KnPageException('%s not found' % self.imgfname)
-
-    def write(self, outfilename=None, om=None):
-        if om is None:
-            om = self.img
-        if outfilename is None:
-            if hasattr(self, 'outfilename'):
-                outfilename = self.outfilename
-            else:
-                raise
-        cv2.imwrite(outfilename, om)
 
     def update(self, v):
         self.val = v
@@ -178,13 +158,13 @@ class KnPage:
         for n in ['sobel', 'scharr', 'laplacian']:
             if n in self.parameters:
                 if not 'outfilename' in self.parameters:
-                    outfilename = mkFilename(self, '_' + n,
-                                             outdir=outdir, ext='.jpeg')
+                    outfilename = ku.mkFilename(self, '_' + n,
+                                                outdir=outdir, ext='.jpeg')
                 else:
                     outfilename = self.parameters['outfilename']
                 if outfilename == "auto":
-                    outfilename = mkFilename(self, '_' + n,
-                                             outdir=outdir, ext='.jpeg')
+                    outfilename = ku.mkFilename(self, '_' + n,
+                                                outdir=outdir, ext='.jpeg')
                 img = getattr(self, 'gradients_' + n)
                 cv2.imwrite(outfilename, img)
 
@@ -204,19 +184,19 @@ class KnPage:
                      pt1, pt2, (0, 0, 255), 2)
 
     def write_small_img(self, outdir):
-        outfilename = mkFilename(self, '_small_img', outdir)
+        outfilename = ku.mkFilename(self, '_small_img', outdir)
         cv2.imwrite(outfilename, self.small_img)
-        outfilename = mkFilename(self, '_small_img_gray', outdir)
+        outfilename = ku.mkFilename(self, '_small_img_gray', outdir)
         cv2.imwrite(outfilename, self.small_img_gray)
-        outfilename = mkFilename(self, '_small_img_canny', outdir)
+        outfilename = ku.mkFilename(self, '_small_img_canny', outdir)
         cv2.imwrite(outfilename, self.small_img_canny)
 
     def write_small_img_with_lines(self, outdir):
-        outfilename = mkFilename(self, '_small_img_with_lines', outdir)
+        outfilename = ku.mkFilename(self, '_small_img_with_lines', outdir)
         cv2.imwrite(outfilename, self.small_img_with_lines)
 
     def write_small_img_with_linesP(self, outdir):
-        outfilename = mkFilename(self, '_small_img_with_linesP', outdir)
+        outfilename = ku.mkFilename(self, '_small_img_with_linesP', outdir)
         cv2.imwrite(outfilename, self.small_img_with_linesP)
 
     def write_contours_bounding_rect_to_file(self, outdir=None):
@@ -230,19 +210,19 @@ class KnPage:
                 self.centroids.append((x + w / 2, y + h / 2))
                 cv2.circle(om, (int(x + w / 2),
                                 int(y + h / 2)), 5, [0, 255, 0])
-        self.write(mkFilename(self, '_cont_rect', outdir), om)
+        ku.write(self, ku.mkFilename(self, '_cont_rect', outdir), om)
 
     def write_boxes_to_file(self, outdir):
         om = np.zeros(self.img.shape, np.uint8)
         for box in self.boxes:
             x, y, w, h = box
             cv2.rectangle(om, (x, y), (x + w, y + h), [0, 255, 0])
-        self.write(mkFilename(self, '_boxes', outdir), om)
+        self.write(ku.mkFilename(self, '_boxes', outdir), om)
 
     def write_data_file(self, outdir):
         if not hasattr(self, 'contours'):
             self.getContours()
-        outfilename = mkFilename(self, 'data', outdir)
+        outfilename = ku.mkFilename(self, 'data', outdir)
         with open(outfilename, 'w') as f:
             f.write("contours\n")
             for cnt in self.contours:
@@ -257,7 +237,7 @@ class KnPage:
     def write_binarized_file(self, outdir=None):
         if not hasattr(self, 'contours'):
             self.getContours()
-        outfilename = mkFilename(self, '_binarized', outdir)
+        outfilename = ku.mkFilename(self, '_binarized', outdir)
         self.write(outfilename, self.binarized)
 
     def write_original_with_contour_file(self, outdir=None):
@@ -267,7 +247,7 @@ class KnPage:
         for point in self.contours:
             x, y = point[0][0]
             cv2.circle(self.orig_w_cont, (x, y), 1, [0, 0, 255])
-        outfilename = mkFilename(self, '_orig_w_cont', outdir)
+        outfilename = ku.mkFilename(self, '_orig_w_cont', outdir)
         self.write(outfilename, self.orig_w_cont)
 
     def write_original_with_contour_and_rect_file(self, outdir=None):
@@ -284,8 +264,8 @@ class KnPage:
                                 int(y + h / 2)), 5, [0, 255, 0])
             cx, cy = cnt[0][0]
             cv2.circle(om, (cx, cy), 2, [0, 0, 255])
-        outfilename = mkFilename(self, '_orig_w_cont_and_rect', outdir)
-        self.write(outfilename, self.orig_w_cont_and_rect)
+        outfilename = ku.mkFilename(self, '_orig_w_cont_and_rect', outdir)
+        ku.write(self, outfilename, self.orig_w_cont_and_rect)
 
     def write_all(self, outdir):
         self.write_data_file(outdir)
@@ -397,7 +377,8 @@ class KnPage:
             return []
 
     def write_self_boxes_to_file(self, outdir):
-        with open(mkFilename(self, '_self_boxes', outdir, '.txt'), 'w') as f:
+        with open(ku.mkFilename(
+                  self, '_self_boxes', outdir, '.txt'), 'w') as f:
             f.write("self.boxes\n")
             for box in self.boxes:
                 f.write(str(box) + "\n")
@@ -467,7 +448,7 @@ class KnPage:
         for box in self.collected_boxes:
             x, y, w, h = box
             cv2.rectangle(om, (x, y), (x + w, y + h), [0, 0, 255])
-        self.write(mkFilename(self, '_collected_box', outdir), om)
+        self.write(ku.mkFilename(self, '_collected_box', outdir), om)
 
     def write_original_with_collected_boxes_to_file(self, outdir=None):
         if not hasattr(self, 'collected_boxes'):
@@ -482,7 +463,8 @@ class KnPage:
         for box in self.collected_boxes:
             x, y, w, h = box
             cv2.rectangle(om, (x, y), (x + w, y + h), [0, 0, 255])
-        self.write(mkFilename(self, '_orig_w_collected_box', outdir), om)
+        #self.write(ku.mkFilename(self, '_orig_w_collected_box', outdir), om)
+        cv2.imwrite(ku.mkFilename(self, '_orig_w_collected_box', outdir), om)
 
     def intersect(self, box1, box2, x_margin=20, y_margin=8):
         """
@@ -523,5 +505,5 @@ class KnPage:
            (ay2 in range(by1 - ym, by2 + ym)):
             return True
 
-        import pdb; pdb.set_trace()  # XXX BREAKPOINT
+        # import pdb; pdb.set_trace()  # XXX BREAKPOINT
         return False

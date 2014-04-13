@@ -20,25 +20,40 @@ box15 = (110, 45, 20, 20)
 box16 = (127, 37, 10, 10)
 
 
-def pytest_funcarg__myfuncarg(request):
-        return 42
-
-
-def test_function(myfuncarg):
-        assert myfuncarg == 42
-
-
-def pytest_funcarg__kn(request):
-    img_fname = DATA_DIR + '/twletters/001.jpg'
-    params_fname = DATA_DIR + '/twletters/twletters_01.json'
-    kn = KnKoma(fname=img_fname, datadir=DATA_DIR, params=params_fname)
-    return kn
-
-
-def pytest_funcarg__kn2(request):
-    fname = DATA_DIR + '/twletters/twletters.jpg'
-    params_file_name = DATA_DIR + '/twletters/twletters_01.json'
-    return KnKoma(fname, params=params_file_name)
+def pytest_funcarg__knkoma1(request):
+    bookId = 'twletters'
+    params = {
+        "bookId":      "twletters",
+        "datadir":     '/home/skkmania/mnt2/workspace/pysrc/knbnk/data',
+        "paramfdir":   "/".join([DATA_DIR, bookId]),
+        "workdir":     "/".join([DATA_DIR, bookId]),
+        "outdir":      "/".join([DATA_DIR, bookId]),
+        "paramfname":  "/".join([DATA_DIR, bookId, "knkoma1.json"]),
+        "logfilename": "/".join([DATA_DIR, bookId, "knkoma1.log"]),
+        "tmpl": {
+            "koma": {
+                "scale_size":   640.0,
+                "boundingRect": [16, 32],
+                "mode":         "EXTERNAL",
+                "method":       "NONE",
+                "hough":        [1, 2, 100],
+                "canny":        [50, 200, 3],
+                "imgfname":     "/".join([DATA_DIR, bookId, "001.jpeg"]),
+                "outdir":       "/".join([DATA_DIR, bookId]),
+                "paramfname":   "/".join([DATA_DIR, bookId, "twletters_01.json"]),
+                "outfilename":  "twl_can_50_200_hough_1_2_100"
+            },
+            "page": {
+            },
+            "layout": {
+            },
+            "char": {
+            }
+        },
+        "spec": {}
+    }
+    param_obj = KnParam(params)
+    return KnKoma(param_obj)
 
 
 class TestNew:
@@ -58,18 +73,18 @@ class TestNew:
             KnKoma(params=DATA_DIR + '/imcomplete_sample.json')
         assert 'must be' in str(e)
 
-    def test_new(self, kn):
-        assert kn.img is not None
-        assert kn.img.shape != (100, 100, 3)
-        assert kn.img.shape == (558, 669, 3)
-        assert kn.height == 558
-        assert kn.width == 669
-        assert kn.depth == 3
-        assert kn.gray is not None
-        assert kn.binarized is not None
+    def test_new(self, knkoma1):
+        assert knkoma1.img is not None
+        assert knkoma1.img.shape != (100, 100, 3)
+        assert knkoma1.img.shape == (558, 669, 3)
+        assert knkoma1.height == 558
+        assert knkoma1.width == 669
+        assert knkoma1.depth == 3
+        assert knkoma1.gray is not None
+        assert knkoma1.binarized is not None
 
-    def test_new_try_hamcrest(self, kn):
-        h.assert_that(kn.height, h.equal_to(558))
+    def test_new_try_hamcrest(self, knkoma1):
+        h.assert_that(knkoma1.height, h.equal_to(558))
 
 
 class TestParams:

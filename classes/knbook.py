@@ -9,9 +9,11 @@
 #                             (つまりこのfile自身のfull path)
 #     以下は任意
 #   }
+import logging
 import knkoma as kk
 import knparam as kr
-from .knutil import *
+#import knutil as ku
+import shutil
 import os.path
 import json
 
@@ -50,40 +52,65 @@ class KnBookParamsException(Exception):
 
 
 class KnBook:
-    def __init__(self, param=None, param_fname=None):
-        print param_fname
-        if param is None and param_fname is None:
-            raise KnBookException('param or param_fname must be given.')
+    def __init__(self, param):
+        if param is None:
+            raise KnBookException('param must be given.')
 
         if isinstance(param, kr.KnParam):
-            self.param = param
-        elif os.path.exists(param_fname):
-            self.param = kr.KnParam(param_fname=param_fname)
+            self.p = param
         else:
-            raise KnBookparam_fnameException(param_fname)
+            raise KnBookParamsException('param must be a KnParam object.')
+        self.bookdir = param['book']['bookdir']
         self.expand()
         self.read_metadata()
-        self.komas = []
+        self.logger = logging.getLogger('knbook')
+
+    def start(self):
+        self.logger.debug('KnBook started')
+        self.expand()
+        self.read_metadata()
+        self.logger.debug('komanum: %s', str(self.komanum))
+        for k in range(1, self.komanum + 1):
+            komaIdStr = self.p.set_komaId(current=k, last=self.komanum + 1)
+            self.p.set_imgfname(current=k, last=self.komanum + 1)
+            imgfname = self.set_environment_for_koma(komaIdStr)
+            p = self.p.clone_for_koma({
+                'komadir': self.p['book']['bookdir'] + '/k' + komaIdStr,
+                'komaId': k,
+                'komaIdStr': komaIdStr,
+                'imgfname':  imgfname
+            })
+            koma = kk.KnKoma(p)
+            koma.start()
+
+    def set_environment_for_koma(self, komaIdStr):
+        workdir_for_koma = "/".join([self.bookdir, 'k' + komaIdStr])
+        if not os.path.exists(workdir_for_koma):
+            os.mkdir(workdir_for_koma)
+        imgfname = self.bookdir + '/' + komaIdStr + '.jpeg'
+        shutil.copy(imgfname, workdir_for_koma)
+        return workdir_for_koma + '/' + komaIdStr + '.jpeg'
 
     def expand(self):
-        if not os.path.exists(self.param.outdir()):
+        if not os.path.exists(self.p.outdir()):
             cmd = 'tar jxf %s/%s.tar.bz2 -C %s' % (
-                self.param.datadir(), self.param.bookId(),
-                self.param.workdir())
+                self.p.datadir(), self.p.bookId(), self.p.workdir())
             os.system(cmd)
             cmd = "find %s -type d -name '*%s*' -exec mv {} %s \\;" %\
-                (self.param.datadir(), self.param.bookId(),
-                 self.param.workdir())
+                (self.p.datadir(), self.p.bookId(), self.p.workdir())
             os.system(cmd)
 
     def read_metadata(self):
-        self.metafname = (self.param.workdir()
-                          + '/raw_' + self.param.bookId() + '.json')
+        self.metafname = (self.p['book']['bookdir']
+                          + '/common_' + self.p.bookId() + '.json')
         if os.path.exists(self.metafname):
             with open(self.metafname) as f:
                 lines = f.readlines()
                 self.metadata = json.loads(''.join(lines))
                 self.komanum = int(self.metadata['lastContentNo'])
+        else:
+            raise KnBookException('metadata file "%s" not found.'
+                                  % self.metafname)
 
     def divide_all(self):
         """
@@ -92,9 +119,9 @@ class KnBook:
         (なので、コマ数が少ないときだけ実行すること。)
         """
         for k in range(1, self.komanum + 1):
-            koma = kk.KnKoma(param=self.param)
-            koma.divide(k)
-            self.komas.append(koma)
+            self.p.set_komanum(current=k, last=self.komanum + 1)
+            koma = kk.KnKoma(param=self.p)
+            koma.divide()
 
     def divide_a_koma(self, komanum):
         """
@@ -102,7 +129,7 @@ class KnBook:
         コマのObjectは保存しない。
         戻り値：KnPage objectのtuple(leftPage, rightPage)
         """
-        koma = kk.KnKoma(param=self.param, komanum=komanum)
+        koma = kk.KnKoma(param=self.p, komanum=komanum)
         return koma.divide()
 
     def collect_all(self):

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
 import os.path
+import cv2
 import knpage as kp
 import knkoma as kk
 
@@ -56,12 +57,18 @@ def read_params(obj, params):
         msg = 'key : %s must be in parameter file' % str(e)
         print msg
         raise KnUtilParamsException(msg)
+    if 'outfilename' in obj.parameters:
+        obj.outfilename = obj.parameters['outfilename']
+        if obj.outfilename == "auto":
+            obj.outfilename = mkoutfilename(obj.parameters)
+    else:
+        obj.outfilename = mkoutfilename(obj.parameters)
 
 
 def print_params_files(params_list):
     ret = []
     for params in params_list:
-        fname = params['paramfname']
+        fname = params['param']['paramfname']
         with open(fname, 'w') as f:
             json.dump(params, f, sort_keys=False, indent=4)
             ret.append(fname)
@@ -76,11 +83,11 @@ def check_test_environment(param_dict, bookId):
     (testのたびにそのtestの設定を使うこと。
     別のtestの影響を受けたくないので。)
     """
-    if not os.path.exists(param_dict['outdir']):
+    if not os.path.exists(param_dict['param']['outdir']):
         cmd = 'tar jxf %s/%s.tar.bz2 -C %s' % (DATA_DIR, bookId, DATA_DIR)
         os.system(cmd)
         cmd = "find %s -type d -name '*%s*' -exec mv {} %s \\;" %\
-            (DATA_DIR, bookId, param_dict["outdir"])
+            (DATA_DIR, bookId, param_dict['param']["outdir"])
         os.system(cmd)
 
     print_params_files([param_dict])
@@ -140,3 +147,13 @@ def mkoutfilename(params, fix=None):
         return res + fix
     else:
         return res
+
+    def write(obj, outfilename=None, om=None):
+        if om is None:
+            om = obj.img
+        if outfilename is None:
+            if hasattr(obj, 'outfilename'):
+                outfilename = obj.outfilename
+            else:
+                raise
+        cv2.imwrite(outfilename, om)

@@ -12,8 +12,9 @@
 #     以下は任意
 #     "outfilename"  : "string",                # 出力するfileのbasenameを指定
 #     "boundingRect" : [min, max],              # boundingRectの大きさ指定
-#     "mode"         : findContoursのmode,      # EXTERNAL, LIST, CCOMP, TREE
-#     "method"       : findContoursのmethod,    # NONE, SIMPLE, L1, KCOS
+#     "contour"      : [mode, method],
+#         "mode"         : findContoursのmode,   # EXTERNAL, LIST, CCOMP, TREE
+#         "method"       : findContoursのmethod, # NONE, SIMPLE, L1, KCOS
 
 #   HoughLinesのparameter
 #     "hough"        : [rho, theta, minimumVote]
@@ -64,6 +65,7 @@
 #      出力5 :  contourとそのboundingRectを重ね書きしたファイル
 
 import logging
+import os
 import sys
 import numpy as np
 import itertools
@@ -117,16 +119,52 @@ class KnKoma:
         else:
             if isinstance(param, kr.KnParam):
                 self.p = param
+                self.parameters = param['koma']
             else:
                 raise KnKomaParamsException('param must be KnParam object')
+            self.komaIdStr = self.p.get_komaIdStr()
+            self.logger = logging.getLogger(self.komaIdStr)
+            self.workdir = self.p['koma']['komadir']
+            self.imgfname = self.p['koma']['imgfname']
+            self.complemented = False
             self.get_img()
-            self.komanumstr = self.parameters['komanumstr']
-            self.logger = logging.getLogger(self.komanumstr)
 
     def __exit__(self, type, value, traceback):
         self.logger.debug('exit')
 
+    def start(self):
+        self.logger.debug('KnKoma started')
+        self.adjust_parameters()
+        self.set_original_corner_lines()
+        self.get_page_img()
+        self.mk_page_dirname()
+        self.mk_page_param_dicts()
+        self.mk_page_dir_and_write_img_file()
+        for d in self.page_param_dicts:
+            p = self.p.clone_for_page(d)
+            kp.KnPage(p).start()
+
+    def mk_page_param_dicts(self):
+        pd0 = self.workdir + '/' + self.pagedirname['right']
+        pd1 = self.workdir + '/' + self.pagedirname['left']
+        ret = [
+            {
+                "lr": "right",
+                "pagedir": pd0,
+                "imgfname": pd0 +
+                '/' + self.p['koma']['komaIdStr'] + '_0.jpeg'},
+            {
+                "lr": "left",
+                "pagedir": pd1,
+                "imgfname": pd1 +
+                '/' + self.p['koma']['komaIdStr'] + '_1.jpeg'}]
+        self.logger.debug('mk_page_param_dict returns : %s' % str(ret))
+        self.page_param_dicts = ret
+        return ret
+
     def get_img(self):
+        self.logger.debug('entered in get_img')
+        self.imgfname = self.parameters['imgfname']
         if os.path.exists(self.imgfname):
             self.img = cv2.imread(self.imgfname)
             if self.img is None:
@@ -139,10 +177,11 @@ class KnKoma:
                                    'center': [], 'left': [], 'right': []}
                 self.gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
                 self.getBinarized()
+                self.logger.debug('successfully leaving from get_img.')
         else:
             raise KnKomaException('%s not found' % self.imgfname)
 
-    def changeparam_fname(self, cnt):
+    def changeparam(self, cnt):
         rho, theta, minimumVote = self.parameters['hough']
         minimumVote = int(0.9 * minimumVote)
         self.parameters['hough'] = [rho, theta, minimumVote]
@@ -156,19 +195,20 @@ class KnKoma:
     def simply_divide_half(self):
         self.leftPage = self.img[:, :int(self.width / 2)]
         self.rightPage = self.img[:, int(self.width / 2):]
-        self.write_both_pages()
+        self.write_page_img_to_file()
 
     def isCenterAmbiguous(self):
         return len(self.candidates['left']) > 0 and\
             len(self.candidates['center']) > 0 and\
             len(self.candidates['right']) > 0
 
-    def divide(self, param_fname=None):
+    def adjust_parameters(self):
         """
         self.imgを分割しleftPage, rightPageを生成する
-        入力値: string : KnPage生成に必要なparameter file name
-        戻り値: KnPage objectのtuple (leftPageObj, rightPageObj)
+        その過程でparameterを調整する
+        戻り値：なし
         """
+        self.logger.debug('entered in adjust_parameters')
         self.cornerLines = {}
         try_count = 0
         while try_count < 5:
@@ -177,7 +217,7 @@ class KnKoma:
             if self.lines is None:
                 self.logger.debug(
                     'lines not found. try count : %d' % try_count)
-                self.changeparam_fname(try_count)
+                self.changeparam(try_count)
                 try_count += 1
                 continue
             elif self.enoughLines():
@@ -189,41 +229,85 @@ class KnKoma:
             else:
                 self.logger.debug(
                     'lines not enough. try count : %d' % try_count)
-                self.changeparam_fname(try_count)
+                self.changeparam(try_count)
                 try_count += 1
         else:
             self.logger.debug('KnKoma#divide: retry over 5 times and gave up!')
             self.complement_corner_lines()
 
+    def divide(self, param=None):
+        """
+        self.imgを分割しleftPage, rightPageを生成する
+        入力値: string : KnPage生成に必要なparameter file name
+        戻り値: なし
+        """
+        self.logger.debug('entered in divide')
+        self.cornerLines = {}
+        try_count = 0
+        while try_count < 5:
+            self.prepareForLines()
+            self.getHoughLines()
+            if self.lines is None:
+                self.logger.debug(
+                    'lines not found. try count : %d' % try_count)
+                self.changeparam(try_count)
+                try_count += 1
+                continue
+            elif self.enoughLines():
+                self.findCornerLines()
+                if self.isCenterAmbiguous():
+                    self.findCenterLine()
+                # self.verifyCornerLines()
+                break
+            else:
+                self.logger.debug(
+                    'lines not enough. try count : %d' % try_count)
+                self.changeparam(try_count)
+                try_count += 1
+        else:
+            self.logger.debug('KnKoma#divide: retry over 5 times and gave up!')
+            self.complement_corner_lines()
+
+        self.set_original_corner_lines()
+        self.get_page_img()
+        self.write_page_img_to_file()
+
+    def set_original_corner_lines(self):
         self.originalCorner = {}
         for d in ['upper', 'lower', 'center', 'right', 'left']:
             self.originalCorner[d] = int(self.cornerLines[d][0] / self.scale)
 
+    def get_page_img(self):
         o = self.originalCorner
         self.leftPage = self.img[o['upper']:o['lower'],
                                  o['left']:o['center']]
         self.rightPage = self.img[o['upper']:o['lower'],
                                   o['center']:o['right']]
-        self.write_both_pages()
-        self.leftPageObj = kp.KnPage(param_fname=param_fname, lr='left')
-        self.rightPageObj = kp.KnPage(param_fname=param_fname, lr='right')
-        return (self.leftPageObj, self.rightPageObj)
 
-    def write_both_pages(self):
-        self.write(ku.mkFilename(self, fix='_left', ext='.jpeg'),
-                   self.leftPage)
-        self.write(ku.mkFilename(self, fix='_right', ext='.jpeg'),
-                   self.rightPage)
+    def mk_page_dirname(self):
+        self.pagedirname = {}
+        if self.complemented:
+            self.pagedirname = {}
+            self.pagedirname['right'] = '/complemented/right'
+            self.pagedirname['left'] = '/complemented/left'
+        else:
+            ret = 'ss_%d' % self.scale_size
+            ret += '/can_%d_%d_%d' % tuple(self.parameters['canny'])
+            ret += '/hgh_%d_%d_%d' % tuple(self.parameters['hough'])
+            self.pagedirname['right'] = ret + '/right'
+            self.pagedirname['left'] = ret + '/left'
 
-    def write(self, outfilename=None, om=None):
-        if om is None:
-            om = self.img
-        #if hasattr(self, 'outfilename'):
-        #    outfilename = self.outfilename
-        #if outfilename:
-        cv2.imwrite(outfilename, om)
-        #else:
-        #  raise
+    def mk_page_dir_and_write_img_file(self):
+        pagedir = self.page_param_dicts[0]['pagedir']
+        if not os.path.exists(pagedir):
+            os.makedirs(pagedir)
+        cv2.imwrite(self.page_param_dicts[0]['imgfname'],
+                    self.rightPage)
+        pagedir = self.page_param_dicts[1]['pagedir']
+        if not os.path.exists(pagedir):
+            os.makedirs(pagedir)
+        cv2.imwrite(self.page_param_dicts[1]['imgfname'],
+                    self.leftPage)
 
     def update(self, v):
         self.val = v
@@ -296,7 +380,12 @@ class KnKoma:
                              cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
     def prepareForLines(self):
-        if 'scale_size' in self.parameters.raw:
+        """
+        縮小画像を作成
+        hough parameters (rho, theta, minimumVote)をいったん確定しておく
+        canny parameters (minval, maxval, apertureSize)をいったん確定しておく
+        """
+        if 'scale_size' in self.parameters:
             self.scale_size = self.parameters['scale_size']
             self.scale = self.scale_size / self.width
         else:
@@ -448,8 +537,9 @@ class KnKoma:
             self.small_zone[d] = [self.small_width * x for x in levels[d]]
 
     def enoughLines(self):
+        komanumstr = self.p['koma']['komaIdStr']
         self.logger.info('# of self.lines in %s : %s' %
-                         (self.komanumstr, len(self.lines)))
+                         (komanumstr, len(self.lines)))
         if len(self.lines) < 5:
             self.logger.debug('self.lines : %s' % str(self.lines))
             self.logger.debug('enoughLines returns *False*' +
@@ -535,6 +625,7 @@ class KnKoma:
         self.cornerLines['center'] = [int(self.small_width * 0.5), 0]
         self.logger.debug('just before exitting complement_corner_lines:')
         self.logger.debug(str(self.cornerLines))
+        self.complemented = True
 
     def findCornerLineP(self):
         a = self.linePoints
@@ -663,7 +754,7 @@ class KnKoma:
         if not hasattr(self, 'contours'):
             self.getContours()
         outfilename = ku.mkFilename(self, '_binarized', outdir)
-        self.write(outfilename, self.binarized)
+        cv2.imwrite(outfilename, self.binarized)
 
     def include(self, box1, box2):
         """

@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-import os.path
+#import os.path
 import pytest
-import json
-from classes.knparam import *
-from classes.knpage import *
-from classes.knkoma import *
-from classes.knbook import *
-from classes.knutil import *
+#import json
+from classes.knparam import KnParam
+from classes.knpage import KnPage
+#from classes.knkoma import KnKoma
+from classes.knbook import KnBook
+import classes.knutil as ku
 
 DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data'
 
@@ -14,32 +14,44 @@ DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data'
 def pytest_funcarg__knp(request):
     bookId = '1091460'
     params = {
-        "bookId":      "1091460",
-        "datadir":     '/home/skkmania/mnt2/workspace/pysrc/knbnk/data',
-        "paramfdir":   "/".join([DATA_DIR, bookId]),
-        "workdir":     "/".join([DATA_DIR, bookId]),
-        "outdir":      "/".join([DATA_DIR, bookId]),
-        "paramfname":  "/".join([DATA_DIR, bookId, "knbk1.json"]),
-        "logfilename": "/".join([DATA_DIR, bookId, "knbk1.log"]),
-        "tmpl": {
-            "koma": {
-                "scale_size":   640.0,
-                "boundingRect": [16, 32],
-                "mode":         "EXTERNAL",
-                "method":       "NONE",
-                "hough":        [1, 2, 100],
-                "canny":        [50, 200, 3],
-                "imgfname":     "/".join([DATA_DIR, bookId, "t.jpeg"]),
-                "outdir":       "/".join([DATA_DIR, bookId]),
-                "paramfname":   "/".join([DATA_DIR, bookId, "twletters_01.json"]),
-                "outfilename":  "twl_can_50_200_hough_1_2_100"
-            },
-            "page": {
-            },
-            "layout": {
-            },
-            "char": {
-            }
+        "param": {
+            "arcdir":      DATA_DIR,
+            "outdir":      "/".join([DATA_DIR, bookId]),
+            "workdir":     DATA_DIR,
+            "paramfdir":   DATA_DIR,
+            "paramfname":  "/".join([DATA_DIR, "knbk1.json"]),
+            "logfilename": "/".join([DATA_DIR, bookId, "knbk1.log"]),
+            #"balls":       ["1123003", "1142178", "1092905"]
+            "balls":       ["1123003", "1092905"]
+        },
+        "book": {
+            "bookdir":      "/".join([DATA_DIR, bookId]),
+            "bookId":       "1091460",
+        },
+        "koma": {
+            "komadir":      "/".join([DATA_DIR, bookId, 'k001']),
+            "komaId":       1,
+            "komaIdStr":    "001",
+            "scale_size":   640.0,
+            "hough":        [1, 2, 100],
+            "canny":        [50, 200, 3],
+            "imgfname":     "/".join([DATA_DIR, bookId, "001.jpeg"]),
+        },
+        "page": {
+            "pagedir":      "/".join([DATA_DIR, bookId, 'k001',
+                                      'can_50_200',
+                                      'hgh_1_2_100', 'right']),
+            "imgfname":     "/".join([DATA_DIR, bookId,
+                                      "pagedir", "001_0.jpeg"]),
+            "lr": "right",
+            "boundingRect": [16, 32],
+            "mode":         "EXTERNAL",
+            "method":       "NONE",
+            "canny":        [50, 200, 3]
+        },
+        "layout": {
+        },
+        "char": {
         },
         "spec": {
             "001": {
@@ -61,39 +73,49 @@ def pytest_funcarg__knp(request):
             }
         }
     }
-    check_test_environment(params, bookId)
-    return KnParam(param_fname=params['paramfname'])
+    ku.check_test_environment(params, bookId)
+    return KnParam(param_fname=params['param']['paramfname'])
 
 
 def pytest_funcarg__knpd(request):
     bookId = '1091460'
     params = {
-        "bookId":      "1091460",
-        "datadir":     '/home/skkmania/mnt2/workspace/pysrc/knbnk/data',
-        "paramfdir":   "/".join([DATA_DIR, bookId]),
-        "workdir":     "/".join([DATA_DIR, bookId]),
-        "outdir":      "/".join([DATA_DIR, bookId]),
-        "paramfname":  "/".join([DATA_DIR, bookId, "knbk1.json"]),
-        "logfilename": "/".join([DATA_DIR, bookId, "knbk1.log"]),
-        "tmpl": {
-            "koma": {
-                "scale_size":   640.0,
-                "boundingRect": [16, 32],
-                "mode":         "EXTERNAL",
-                "method":       "NONE",
-                "hough":        [1, 2, 100],
-                "canny":        [50, 200, 3],
-                "imgfname":     "/".join([DATA_DIR, bookId, "t.jpeg"]),
-                "outdir":       "/".join([DATA_DIR, bookId]),
-                "paramfname":   "/".join([DATA_DIR, bookId, "twletters_01.json"]),
-                "outfilename":  "twl_can_50_200_hough_1_2_100"
-            },
-            "page": {
-            },
-            "layout": {
-            },
-            "char": {
-            }
+        "param": {
+            "arcdir":      DATA_DIR,
+            "outdir":      "/".join([DATA_DIR, bookId]),
+            "workdir":     DATA_DIR,
+            "paramfdir":   DATA_DIR,
+            "paramfname":  "/".join([DATA_DIR, "knbk1.json"]),
+            "logfilename": "/".join([DATA_DIR, bookId, "knbk1.log"]),
+            "balls":       ["1091460"]
+        },
+        "book": {
+            "bookdir":      "/".join([DATA_DIR, bookId]),
+            "bookId":       "1091460",
+        },
+        "koma": {
+            "komadir":      "/".join([DATA_DIR, bookId, 'k001']),
+            "komaId":       1,
+            "komaIdStr":    "001",
+            "scale_size":   640.0,
+            "hough":        [1, 2, 100],
+            "canny":        [50, 200, 3],
+            "imgfname":     "/".join([DATA_DIR, bookId, "001.jpeg"]),
+        },
+        "page": {
+            "pagedir":      "/".join([DATA_DIR, bookId, 'k001',
+                                      'can_50_200',
+                                      'hgh_1_2_100', 'right']),
+            "imgfname":     "/".join([DATA_DIR, bookId,
+                                      "pagedir", "001_0.jpeg"]),
+            "lr": "right",
+            "boundingRect": [16, 32],
+            "mode":         "EXTERNAL",
+            "method":       "NONE",
+        },
+        "layout": {
+        },
+        "char": {
         },
         "spec": {
             "001": {
@@ -115,8 +137,9 @@ def pytest_funcarg__knpd(request):
             }
         }
     }
-    check_test_environment(params, bookId)
+    ku.check_test_environment(params, bookId)
     return KnParam(param_dict=params)
+
 
 def pytest_funcarg__kn(request):
     bookId = 'twletters'
@@ -132,8 +155,8 @@ def pytest_funcarg__kn(request):
         "paramfname":   "/".join([DATA_DIR, bookId, "twletters_01.json"]),
         "outfilename":  "twl_can_50_200_hough_1_2_100"
     }
-    check_test_environment(params, bookId)
-    return KnPage(params=params['paramfname'])
+    ku.check_test_environment(params, bookId)
+    return KnPage(params=params['param']['paramfname'])
 
 
 def pytest_funcarg__kn005(request):
@@ -149,23 +172,55 @@ def pytest_funcarg__kn005(request):
         "paramfname":   "/".join([DATA_DIR, bookId, "twletters_04.json"]),
         "outfilename":  "twl_can_100_200"
     }
-    check_test_environment(params, bookId)
+    ku.check_test_environment(params, bookId)
     return KnPage(params=params['paramfname'])
 
 
 def pytest_funcarg__knbk1(request):
+    DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data'
     bookId = '1091460'
     params = {
-        "bookId":      "1091460",
-        "arcpath":     "/".join([DATA_DIR, bookId + '.tar.bz2']),
-        "outdir":      "/".join([DATA_DIR, bookId]),
-        "workdir":      "/".join([DATA_DIR, bookId]),
-        "paramfdir":      "/".join([DATA_DIR, bookId]),
-        "paramfname":  "/".join([DATA_DIR, bookId, "knbk1.json"]),
-        "logfilename":  "/".join([DATA_DIR, bookId, "knbk1.log"])
+        "param": {
+            "arcdir":      DATA_DIR,
+            "outdir":      "/".join([DATA_DIR, bookId]),
+            "workdir":     DATA_DIR,
+            "paramfdir":   DATA_DIR,
+            "paramfname":  "/".join([DATA_DIR, "knbk1.json"]),
+            "logfilename": "/".join([DATA_DIR, bookId, "knbk1.log"]),
+            "balls":       ["1091460"]
+        },
+        "book": {
+            "bookdir":      "/".join([DATA_DIR, bookId]),
+            "bookId":       "1091460",
+        },
+        "koma": {
+            "komadir":      "/".join([DATA_DIR, bookId, 'k001']),
+            "komaId":       1,
+            "komaIdStr":    "001",
+            "scale_size":   640.0,
+            "hough":        [1, 2, 100],
+            "canny":        [50, 200, 3],
+            "imgfname":     "/".join([DATA_DIR, bookId, "001.jpeg"]),
+        },
+        "page": {
+            "pagedir":      "/".join([DATA_DIR, bookId, 'k001',
+                                      'can_50_200',
+                                      'hgh_1_2_100', 'right']),
+            "imgfname":     "/".join([DATA_DIR, bookId,
+                                      "pagedir", "001_0.jpeg"]),
+            "lr": "right",
+            "boundingRect": [16, 32],
+            "mode":         "EXTERNAL",
+            "method":       "NONE",
+        },
+        "layout": {
+        },
+        "char": {
+        }
     }
-    check_test_environment(params, bookId)
-    return KnBook(param_fname=params['paramfname'])
+    ku.check_test_environment(params, bookId)
+    param = KnParam(param_fname=params['param']['paramfname'])
+    return KnBook(param)
 
 
 def pytest_funcarg__twl(request):
@@ -182,8 +237,8 @@ def pytest_funcarg__twl(request):
         "paramfname":   "/".join([DATA_DIR, bookId, "twletters_01.json"]),
         "outdir":       "/".join([DATA_DIR, bookId])
     }
-    check_test_environment(params, bookId)
-    return KnPage(params=params['paramfname'])
+    ku.check_test_environment(params, bookId)
+    return KnPage(params)
 
 
 def pytest_runtest_setup(item):
