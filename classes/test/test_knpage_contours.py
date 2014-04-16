@@ -1,9 +1,20 @@
 # -*- coding: utf-8 -*-
-import pytest
-from classes.knpage import *
-from classes.knutil import *
+#import pytest
+#import classes.knpage as kp
+#import classes.knutil as ku
 
 DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data'
+
+
+class TestGraph:
+    def test_write_binarized_file(self, graph):
+        graph.write_binarized_file(DATA_DIR)
+
+    def test_write_contours_bounding_rect_to_file(self, graph):
+        graph.write_contours_bounding_rect_to_file()
+
+    #def test_write_all(self, graph):
+    #    graph.write_all(DATA_DIR)
 
 
 class TestBinarized:
@@ -12,31 +23,26 @@ class TestBinarized:
 
 
 class TestContours:
-    def test_getContours(self, twl):
-        twl.getContours()
-        assert twl.gray is not None
-        assert twl.contours is not None
-        assert twl.hierarchy is not None
+    def test_getContours(self, kn005):
+        kn005.getContours()
+        assert kn005.gray is not None
+        assert kn005.contours is not None
+        assert kn005.hierarchy is not None
 
-    def test_getCentroids(self, twl):
-        twl.getCentroids()
-        assert twl.centroids is not None
+    def test_getCentroids(self, kn005):
+        kn005.getCentroids()
+        assert kn005.centroids is not None
 
-    def test_writeContour(self, twl):
-        twl.getContours()
-        twl.writeContour()
-        assert twl.img_of_contours is not None
+    def test_writeContour(self, kn005):
+        kn005.getContours()
+        kn005.writeContour()
+        assert kn005.img_of_contours is not None
 
-    def test_write_original_with_contour_file(self, twl):
-        twl.write_original_with_contour_file()
+    def test_write_original_with_contour_file(self, kn005):
+        kn005.write_original_with_contour_file()
 
-    def test_write_original_with_contour_and_rect_file(self, twl):
-        twl.write_original_with_contour_and_rect_file()
-
-
-class TestWriteBinarized:
-    def test_write_binarized_file(self, kn005):
-        kn005.write_binarized_file()
+    def test_write_original_with_contour_and_rect_file(self, kn005):
+        kn005.write_original_with_contour_and_rect_file()
 
 
 class TestWriteContoursBoundingRect:
@@ -45,9 +51,6 @@ class TestWriteContoursBoundingRect:
 
 
 class TestCollectedBoxes:
-    """
-    注意!：対象がオリジナルのひとコマなため10分程度かかる
-    """
     def test_collect_boxes(self, kn005):
         kn005.collect_boxes()
         kn005.write_collected_boxes_to_file()
@@ -55,81 +58,5 @@ class TestCollectedBoxes:
 
 
 class TestWriteAll:
-    """
-    注意!：対象がオリジナルのひとコマなため15分程度かかる
-    """
     def test_write_all(self, kn005):
         kn005.write_all(DATA_DIR)
-
-
-class TestWriteAllForAllParams:
-    """
-    注意 所要時間 15分
-    """
-    def test_write_all(self):
-        data_dir = DATA_DIR + '/twletters'
-        fname = data_dir + '/twletters.jpg'
-        for i in range(2, 9):
-            params_file_name = data_dir + '/twletters_0' + str(i) + '.json'
-            kn = KnPage(fname, datadir=data_dir, params=params_file_name)
-            kn.write_all(data_dir)
-
-
-class TestWriteGradients:
-    @pytest.mark.parametrize("sobel", [
-        [6, 1, 0, 5],
-        [6, 1, 1, 5],
-        [6, 0, 1, 5]
-    ])
-    def test_write_gradients(self, sobel):
-        bookId = 'twletters'
-        params = {
-            "scale_size":   640.0,
-            "imgfname":     "/".join([DATA_DIR, bookId, "twletters.jpg"]),
-            "outdir":       "/".join([DATA_DIR, bookId]),
-            "paramfname":   "/".join([DATA_DIR, bookId, "twl_sobel.json"]),
-            "outfilename":  "auto",
-            "boundingRect": [16, 32],
-            "mode":         "TREE",
-            "method":       "NONE",
-            "sobel":        sobel,
-            "scharr":       [-1, 0, 1]
-        }
-        print_params_files([params])
-        check_test_environment(params, bookId)
-        knSobel = KnPage(params=params['paramfname'])
-        knSobel.getGradients()
-        knSobel.write_gradients()
-
-
-class TestWriteScharr:
-    @pytest.mark.parametrize("scharr", [
-        [-1, 0, 1],
-        [-1, 1, 0]
-    ])
-    def test_write_gradients(self, scharr):
-        bookId = 'twletters'
-        params = {
-            "scale_size":   640.0,
-            "imgfname":     "/".join([DATA_DIR, bookId, "twletters.jpg"]),
-            "outdir":       "/".join([DATA_DIR, bookId]),
-            "paramfname":   "/".join([DATA_DIR, bookId, "twl_scharr.json"]),
-            "outfilename":  "auto",
-            "boundingRect": [16, 32],
-            "mode":         "TREE",
-            "method":       "NONE",
-            "scharr":       scharr
-        }
-        print_params_files([params])
-        check_test_environment(params, bookId)
-        knSobel = KnPage(params=params['paramfname'])
-        knSobel.getGradients()
-        knSobel.write_gradients()
-
-
-#class TestProcessParamFiles:
-#    def test_readfiles(self):
-#        sampleDirName = DATA_DIR
-#        for f in dir:
-#            outdir = OUT_DIR + f
-#            kn = KnPage(params=f, outdir=outdir)

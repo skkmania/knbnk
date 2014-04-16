@@ -48,13 +48,25 @@ class KnPage:
             raise KnPageException('param must be specified.')
         else:
             if isinstance(param, kr.KnParam):
-                self.p = param
-                self.parameters = param['page']
+                self.read_parameter(param)
             else:
                 raise KnPageParamsException('param must be KnParam object')
             self.get_img()
             self.lrstr = self.p.lrstr()
             self.logger = logging.getLogger(self.lrstr)
+            self.collected_boxes = []
+
+    def read_parameter(self, param):
+        self.p = param
+        self.parameters = param['page']
+        if "mavstd" in self.parameters:
+            self.mavstd = self.parameters['mavstd']
+        else:
+            self.mavstd = 10
+        if "pgmgn" in self.parameters:
+            self.pgmgn_x, self.pgmgn_y = self.parameters['pgmgn']
+        else:
+            self.pgmgn_x, self.pgmgn_y = [0.05, 0.05]
 
     def start(self):
         #self.getChars()
@@ -65,7 +77,8 @@ class KnPage:
         pass
 
     def get_img(self):
-        self.imgfname = self.p['page']['imgfname']
+        self.imgfname = "/".join([self.p['page']['pagedir'],
+                                  self.p['page']['imgfname']])
         if os.path.exists(self.imgfname):
             self.img = cv2.imread(self.imgfname)
             if self.img is None:
@@ -200,8 +213,10 @@ class KnPage:
         cv2.imwrite(outfilename, self.small_img_with_linesP)
 
     def write_contours_bounding_rect_to_file(self, outdir=None):
+        self.logger.debug('enterd in write_contours_bounding_rect_to_file')
         if not hasattr(self, 'contours'):
             self.getContours()
+        self.logger.debug('# of contours : %d' % len(self.contours))
         om = np.zeros(self.img.shape, np.uint8)
         for cnt in self.contours:
             x, y, w, h = cv2.boundingRect(cnt)
@@ -210,14 +225,22 @@ class KnPage:
                 self.centroids.append((x + w / 2, y + h / 2))
                 cv2.circle(om, (int(x + w / 2),
                                 int(y + h / 2)), 5, [0, 255, 0])
-        ku.write(self, ku.mkFilename(self, '_cont_rect', outdir), om)
+        cv2.imwrite(ku.mkFilename(self, '_cont_rect', outdir), om)
+
+    def count_contours_bounding_rects(self):
+        self.logger.debug('enterd in count_contours_bounding_rects')
+        if not hasattr(self, 'contours'):
+            self.getContours()
+        self.logger.debug('# of contours : %d' % len(self.contours))
+        for cnt in self.contours:
+            x, y, w, h = cv2.boundingRect(cnt)
 
     def write_boxes_to_file(self, outdir):
         om = np.zeros(self.img.shape, np.uint8)
         for box in self.boxes:
             x, y, w, h = box
             cv2.rectangle(om, (x, y), (x + w, y + h), [0, 255, 0])
-        self.write(ku.mkFilename(self, '_boxes', outdir), om)
+        cv2.imwrite(ku.mkFilename(self, '_boxes', outdir), om)
 
     def write_data_file(self, outdir):
         if not hasattr(self, 'contours'):
@@ -238,7 +261,7 @@ class KnPage:
         if not hasattr(self, 'contours'):
             self.getContours()
         outfilename = ku.mkFilename(self, '_binarized', outdir)
-        self.write(outfilename, self.binarized)
+        cv2.imwrite(outfilename, self.binarized)
 
     def write_original_with_contour_file(self, outdir=None):
         if not hasattr(self, 'contours'):
@@ -248,7 +271,7 @@ class KnPage:
             x, y = point[0][0]
             cv2.circle(self.orig_w_cont, (x, y), 1, [0, 0, 255])
         outfilename = ku.mkFilename(self, '_orig_w_cont', outdir)
-        self.write(outfilename, self.orig_w_cont)
+        cv2.imwrite(outfilename, self.orig_w_cont)
 
     def write_original_with_contour_and_rect_file(self, outdir=None):
         if not hasattr(self, 'contours'):
@@ -265,9 +288,18 @@ class KnPage:
             cx, cy = cnt[0][0]
             cv2.circle(om, (cx, cy), 2, [0, 0, 255])
         outfilename = ku.mkFilename(self, '_orig_w_cont_and_rect', outdir)
-        ku.write(self, outfilename, self.orig_w_cont_and_rect)
+        cv2.imwrite(outfilename, self.orig_w_cont_and_rect)
 
     def write_all(self, outdir):
+        """
+        5つのfileを生成する
+            出力0 :  statitics file  contourなどのデータのテキストファイル
+            出力1 :  findContourを適用する直前の画像のファイル
+            出力2 :  元の画像にcontourを重ね書きしたファイル
+            出力3 :  元の画像にcontourとそのboundingRectを重ね書きしたファイル
+            出力4 :  contourのみを書いたファイル
+            出力5 :  contourとそのboundingRectを重ね書きしたファイル
+        """
         self.write_data_file(outdir)
         self.write_binarized_file(outdir)
         self.write_contours_bounding_rect_to_file(outdir)
@@ -384,61 +416,112 @@ class KnPage:
                 f.write(str(box) + "\n")
             f.write("\n")
 
-    def collect_boxes(self, outdir=None, debug=False):
+    def box_be_maveric(self, box):
+        """
+        box: [x, y, w, h]
+        """
+        # 大きいboxは対象外
+        if sum(box[2:4]) > self.mavstd:
+            return False
+
+    def box_in_page_margin(self, box):
+        """
+        box: [x, y, w, h]
+        """
+
+        x1, y1 = box[0:2]
+        x2, y2 = map(sum, zip(box[0:2], box[2:4]))
+
+        left_mgn = self.width * self.pgmgn_x
+        right_mgn = self.width * (1 - self.pgmgn_x)
+        upper_mgn = self.height * self.pgmgn_y
+        lower_mgn = self.height * (1 - self.pgmgn_y)
+
+        return (y2 < upper_mgn) or (y1 > lower_mgn) or\
+            (x2 < left_mgn) or (x1 > right_mgn)
+
+    def dispose_boxes(self, debug=False):
+        """
+        不要なboxを捨てる
+        """
+        # w, h どちらかが200以上のboxは排除
+        if "toobig" in self.p["page"]:
+            toobig_w, toobig_h = self.p['page']['toobig']
+        else:
+            toobig_w, toobig_h = [200, 200]
+        self.boxes = [x for x in self.boxes
+                      if (x[2] < toobig_w) and (x[3] < toobig_h)]
+
+        # pageの余白に存在すると思われるboxは排除
+        self.boxes = [x for x in self.boxes
+                      if not self.box_in_page_margin(x)]
+
+        # 小さく、隣接するもののないboxは排除
+        self.boxes = [x for x in self.boxes
+                      if not self.box_be_maveric(x)]
+
+    def collect_boxes(self):
         """
         bounding boxを包含するboxに統合し、文字を囲むboxの取得を試みる
         """
-
+        self.logger.debug('enterd into KnPage#collect_boxes')
         if len(self.boxes) == 0:
             self.getCentroids()
 
-        # w, h どちらかが200以上のboxは排除
-        self.boxes = [x for x in self.boxes if (x[2] < 200) and (x[3] < 200)]
+        self.dispose_boxes()
+
+        adjs = []
+        while len(self.boxes) > 0:
+            abox = self.boxes.pop()
+            adjs = self.get_adj_boxes(self.boxes, abox)
+            for x in adjs:
+                if x in self.boxes:
+                    self.boxes.remove(x)
+            adjs.append(abox)
+            if len(adjs) > 0:
+                boundingBox = self.get_boundingBox(adjs)
+                self.collected_boxes.append(boundingBox)
+
+    def collect_boxes_with_debug(self, outdir=None):
+        """
+        bounding boxを包含するboxに統合し、文字を囲むboxの取得を試みる
+        """
+        self.logger.debug('enterd into KnPage#collect_boxes_with_debug')
+        if len(self.boxes) == 0:
+            self.getCentroids()
+
+        self.dispose_boxes(debug=True)
 
         if outdir is None:
             outdir = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data'
 
-        if debug:
-            self.write_self_boxes_to_file(outdir)    # for debug
+        self.write_self_boxes_to_file(outdir)
 
-        self.collected_boxes = []
         adjs = []
 
-        if debug:
-            with open(outdir + '/collect_boxes_debug_output.txt', 'w') as f:
-                while len(self.boxes) > 0:
-                    f.write('self.boxes: ' + str(len(self.boxes)) + "\n")
-                    abox = self.boxes.pop()
-                    f.write('abox : ' + str(abox) + "\n")
-                    adjs = self.get_adj_boxes(self.boxes, abox)
-                    f.write('adjs : ' + str(adjs) + "\n")
-                    for x in adjs:
-                        if x in self.boxes:
-                            self.boxes.remove(x)
-                    f.write('len of self.boxes after remove : '
-                            + str(len(self.boxes)) + "\n")
-                    f.write('self.boxes after remove: '
-                            + str(self.boxes) + "\n")
-                    adjs.append(abox)
-                    f.write('adjs after append: ' + str(adjs) + "\n")
-                    if len(adjs) > 0:
-                        boundingBox = self.get_boundingBox(adjs)
-                        f.write('boundingBox : '
-                                + str(boundingBox) + "\n")
-                        self.collected_boxes.append(boundingBox)
-                        f.write('self.collected_boxes : '
-                                + str(self.collected_boxes) + "\n")
-        else:
+        with open(outdir + '/collect_boxes_debug_output.txt', 'w') as f:
             while len(self.boxes) > 0:
+                f.write('self.boxes: ' + str(len(self.boxes)) + "\n")
                 abox = self.boxes.pop()
+                f.write('abox : ' + str(abox) + "\n")
                 adjs = self.get_adj_boxes(self.boxes, abox)
+                f.write('adjs : ' + str(adjs) + "\n")
                 for x in adjs:
                     if x in self.boxes:
                         self.boxes.remove(x)
+                f.write('len of self.boxes after remove : '
+                        + str(len(self.boxes)) + "\n")
+                f.write('self.boxes after remove: '
+                        + str(self.boxes) + "\n")
                 adjs.append(abox)
+                f.write('adjs after append: ' + str(adjs) + "\n")
                 if len(adjs) > 0:
                     boundingBox = self.get_boundingBox(adjs)
+                    f.write('boundingBox : '
+                            + str(boundingBox) + "\n")
                     self.collected_boxes.append(boundingBox)
+                    f.write('self.collected_boxes : '
+                            + str(self.collected_boxes) + "\n")
 
     def write_collected_boxes_to_file(self, outdir=None):
         if not hasattr(self, 'collected_boxes'):
@@ -448,31 +531,37 @@ class KnPage:
         for box in self.collected_boxes:
             x, y, w, h = box
             cv2.rectangle(om, (x, y), (x + w, y + h), [0, 0, 255])
-        self.write(ku.mkFilename(self, '_collected_box', outdir), om)
+        cv2.imwrite(ku.mkFilename(self, '_collected_box', outdir), om)
 
     def write_original_with_collected_boxes_to_file(self, outdir=None):
         if not hasattr(self, 'collected_boxes'):
             self.collect_boxes()
             self.boxes = self.collected_boxes
             self.collect_boxes()
-            self.boxes = self.collected_boxes
-            self.collect_boxes()
+            #self.boxes = self.collected_boxes
+            #self.collect_boxes()
 
         self.orig_w_collected = self.img.copy()
         om = self.orig_w_collected
         for box in self.collected_boxes:
             x, y, w, h = box
             cv2.rectangle(om, (x, y), (x + w, y + h), [0, 0, 255])
-        #self.write(ku.mkFilename(self, '_orig_w_collected_box', outdir), om)
         cv2.imwrite(ku.mkFilename(self, '_orig_w_collected_box', outdir), om)
 
     def intersect(self, box1, box2, x_margin=20, y_margin=8):
         """
         box1 と box2 が交わるか接するならtrueを返す。
-        marginを指定することですこし離れていても交わっていると判定させることができる
+        marginを指定することですこし離れていても接すると判定.
         """
-        xm = x_margin
-        ym = y_margin
+        if 'ismgn' in self.p['page']:
+            xm, ym = self.p['page']['ismgn']
+        else:
+            xm, ym = (20, 8)        # default
+
+        if x_margin is not None:
+            xm = x_margin
+        if y_margin is not None:
+            ym = y_margin
         ax1, ay1, w1, h1 = box1
         ax2 = ax1 + w1
         ay2 = ay1 + h1
@@ -480,30 +569,15 @@ class KnPage:
         bx2 = bx1 + w2
         by2 = by1 + h2
 
-        if (bx1 in range(ax1 - xm, ax2 + xm)) and\
-           (by1 in range(ay1 - ym, ay2 + ym)):
-            return True
-        if (bx2 in range(ax1 - xm, ax2 + xm)) and\
-           (by2 in range(ay1 - ym, ay2 + ym)):
-            return True
-        if (bx2 in range(ax1 - xm, ax2 + xm)) and\
-           (by1 in range(ay1 - ym, ay2 + ym)):
-            return True
-        if (bx1 in range(ax1 - xm, ax2 + xm)) and\
-           (by2 in range(ay1 - ym, ay2 + ym)):
-            return True
-        if (ax1 in range(bx1 - xm, bx2 + xm)) and\
-           (ay1 in range(by1 - ym, by2 + ym)):
-            return True
-        if (ax2 in range(bx1 - xm, bx2 + xm)) and\
-           (ay2 in range(by1 - ym, by2 + ym)):
-            return True
-        if (ax2 in range(bx1 - xm, bx2 + xm)) and\
-           (ay1 in range(by1 - ym, by2 + ym)):
-            return True
-        if (ax1 in range(bx1 - xm, bx2 + xm)) and\
-           (ay2 in range(by1 - ym, by2 + ym)):
+        if self.h_apart(ax1, ax2, bx1, bx2, xm):
+            return False
+        elif self.v_apart(ay1, ay2, by1, by2, ym):
+            return False
+        else:
             return True
 
-        # import pdb; pdb.set_trace()  # XXX BREAKPOINT
-        return False
+    def h_apart(self, ax1, ax2, bx1, bx2, xm):
+        return ax2 < (bx1 - xm) or (bx2 + xm) < ax1
+
+    def v_apart(self, ay1, ay2, by1, by2, ym):
+        return ay2 < (by1 - ym) or (by2 + ym) < ay1

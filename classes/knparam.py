@@ -5,8 +5,67 @@ import os.path
 import json
 import knutil as ku
 import knbook as kb
+from datetime import datetime
 #import knkoma as kk
 __all__ = ["KnParam", "KnParamException", "KnParamParamsException"]
+
+# param_fname file :  parameterをjson形式であらわしたテキストファイル
+# param_fname file の書式 :  json text
+#     注意：commaの有無
+#      文字列のquotation : 数字、配列以外は文字列なので""でくくること
+#   {
+#     以下は必須
+#     "imgfname"     : "string"                 #  読み込む画像filename (full path)
+#     "outdir"       : "string"                 #  出力するfileのdirectory
+#     "paramfname"   : "string"                 # parameter file name
+#                             (つまりこのfile自身のfull path)
+#     以下は任意
+#     "outfilename"  : "string",                # 出力するfileのbasenameを指定
+#     "boundingRect" : [min, max],              # boundingRectの大きさ指定
+#     "contour"      : [mode, method],
+#         "mode"         : findContoursのmode,   # EXTERNAL, LIST, CCOMP, TREE
+#         "method"       : findContoursのmethod, # NONE, SIMPLE, L1, KCOS
+
+#   HoughLinesのparameter
+#     "hough"        : [rho, theta, minimumVote]
+#          rho : accuracy of rho.  integerを指定。1 など。
+#          theta:  accuracy of theta. int(1 - 180)を指定。
+#                  np.pi/180 などradianで考えるので、その分母を指定する。
+#                  180なら1度ずつ、2なら水平と垂直の直線のみを候補とするという意味
+#          minimumVote:
+#          lineとみなすため必要な点の数。検出する線の長さに影響する。
+
+#   以下の4つは排他。どれかひとつを指定。配列内の意味はopencvのdocを参照のこと
+#     2値化のやりかたを決める重要な設定項目。
+#     "canny"        : [threshold1, threshold2, apertureSize],
+#     "threshold"    : [thresh, maxval, type],
+#     "adaptive"     : [maxval, method, type, blockSize, C]
+#     "harris"       : [blockSize, ksize, k]
+
+#   以下の3つはgradientsのparameter。配列内の意味はopencvのdocを参照のこと
+#     本プロジェクトには意味がない。
+#     "scharr"       : [depth, dx, dy, scale, delta, borderType]
+#     "sobel"        : [depth, dx, dy, ksize]
+#     "laplacian"    : [depth]
+#       これらのdepth は6 (=cv2.CV_64F)とするのが一般的
+#
+#   以下はpage_splitのparameter
+# 処理するときの縦サイズ(px).
+# 小さいほうが速いけど、小さすぎると小さい線が見つからなくなる.
+#cvHoughLines2のパラメータもこれをベースに決める.
+#     "scale_size"   : num  # 640.0 など対象画像の細かさに依存
+# 最低オフセットが存在することを想定する(px).
+# 真ん中にある謎の黒い線の上下をtop,bottomに選択しないためのテキトウな処理で使う.
+#     "hard_offset"  : num  # 32
+# ページ中心のズレの許容範囲(px / 2).
+#  余白を切った矩形の中心からこの距離範囲の間でページの中心を決める.
+#     "center_range" : num  # 64
+# 中心を決める際に使う線の最大数.
+#     "CENTER_SAMPLE_MAX" : num  # 1024
+# 中心決めるときのクラスタ数
+#     "CENTER_K" : num  # 3
+#   }
+#
 
 MandatoryFields = {
     "param": ["arcdir", "paramfdir", "workdir", "outdir",
@@ -15,7 +74,7 @@ MandatoryFields = {
     "koma":  ["komadir", "komaId", "komaIdStr",
               "scale_size", "hough", "canny", "imgfname"],
     "page":  ["pagedir", "imgfname", "lr", "boundingRect",
-              "mode", "method"]
+              "mode", "method", "mavstd", "pgmgn", "ismgn", "toobig", "canny"]
 }
 
 
@@ -72,11 +131,14 @@ class KnParam(dict):
 
         self.mandatory_check()
 
-        logging.basicConfig(filename=self['param']['logfilename'],
+        nowstr = datetime.now().strftime("%Y%m%d_%I%M")
+        logging.basicConfig(filename=self['param']['logfilename']
+                            + '_' + nowstr + '.log',
                             level=logging.DEBUG,
                             format='%(asctime)s %(message)s',
                             datefmt='%m/%d/%Y %I:%M:%S %p')
-        self.logger = logging.getLogger(self['book']['bookId'])
+        #self.logger = logging.getLogger(self['book']['bookId'])
+        self.logger = logging.getLogger('param')
         self.logger.warning(str(self))
 
     def read_paramf(self, param_fname):

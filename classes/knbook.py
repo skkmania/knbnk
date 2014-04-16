@@ -60,10 +60,12 @@ class KnBook:
             self.p = param
         else:
             raise KnBookParamsException('param must be a KnParam object.')
+        self.arcdir = param['param']['arcdir']
+        self.bookId = param['book']['bookId']
         self.bookdir = param['book']['bookdir']
+        self.logger = logging.getLogger('knbook')
         self.expand()
         self.read_metadata()
-        self.logger = logging.getLogger('knbook')
 
     def start(self):
         self.logger.debug('KnBook started')
@@ -75,7 +77,7 @@ class KnBook:
             self.p.set_imgfname(current=k, last=self.komanum + 1)
             imgfname = self.set_environment_for_koma(komaIdStr)
             p = self.p.clone_for_koma({
-                'komadir': self.p['book']['bookdir'] + '/k' + komaIdStr,
+                'komadir': self.bookdir + '/k' + komaIdStr,
                 'komaId': k,
                 'komaIdStr': komaIdStr,
                 'imgfname':  imgfname
@@ -87,18 +89,39 @@ class KnBook:
         workdir_for_koma = "/".join([self.bookdir, 'k' + komaIdStr])
         if not os.path.exists(workdir_for_koma):
             os.mkdir(workdir_for_koma)
-        imgfname = self.bookdir + '/' + komaIdStr + '.jpeg'
-        shutil.copy(imgfname, workdir_for_koma)
-        return workdir_for_koma + '/' + komaIdStr + '.jpeg'
+        imgfname = self.bookdir + '/' + komaIdStr + self.ext
+        shutil.move(imgfname, workdir_for_koma)
+        return workdir_for_koma + '/' + komaIdStr + self.ext
 
     def expand(self):
-        if not os.path.exists(self.p.outdir()):
-            cmd = 'tar jxf %s/%s.tar.bz2 -C %s' % (
-                self.p.datadir(), self.p.bookId(), self.p.workdir())
+        self.logger.debug('enterd into KnBook#expand')
+        if os.path.exists(self.arcdir + '/tmp'):
+            os.system('rm -fr "%s"' % self.arcdir + '/tmp')
+        else:
+            os.mkdir(self.arcdir + '/tmp')
+        if not os.path.exists(self.bookdir):
+            cmd = 'tar jxf %s/%s.tar.bz2 -C %s/tmp' % (
+                self.arcdir, self.bookId, self.arcdir)
+            self.logger.debug('cmd: %s', cmd)
             os.system(cmd)
-            cmd = "find %s -type d -name '*%s*' -exec mv {} %s \\;" %\
-                (self.p.datadir(), self.p.bookId(), self.p.workdir())
+            cmd = "find %s/tmp/* -type d -name 'original' -exec mv {} %s \\;"\
+                % (self.arcdir, self.bookdir)
+            self.logger.debug('cmd: %s', cmd)
             os.system(cmd)
+            cmd = "find %s/tmp/* -type f -name '*.json' -exec mv {} %s \\;" %\
+                (self.arcdir, self.bookdir)
+            self.logger.debug('cmd: %s', cmd)
+            os.system(cmd)
+            cmd = "find %s/tmp -type d -name '*%s*' -exec mv {} %s \\;" %\
+                (self.arcdir, self.bookId, self.bookdir)
+            self.logger.debug('cmd: %s', cmd)
+            os.system(cmd)
+        if os.path.exists(self.bookdir + '/001.jpeg'):
+            self.ext = '.jpeg'
+        elif os.path.exists(self.bookdir + '/001.jpg'):
+            self.ext = '.jpg'
+        else:
+            raise 'KnBook#expand: image file 001 not found'
 
     def read_metadata(self):
         self.metafname = (self.p['book']['bookdir']

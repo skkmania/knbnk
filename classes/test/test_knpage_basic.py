@@ -88,33 +88,35 @@ class TestBoundingRect:
         assert not kn.include(box01, box04)
         assert kn.include(box02, box06)
 
-    def test_intersect(self):
+
+class TestInterSect:
+    def test_intersect(self, knp):
         box01 = (20, 30, 10, 10)
         box02 = (25, 35, 15, 15)
         box03 = (35, 45, 10, 10)
         box04 = (35, 20, 20, 20)
         box05 = (10, 45, 20, 20)
-        fname = DATA_DIR + '/twletters.jpg'
-        params_fname = DATA_DIR + '/twletters_01.json'
-        kn = KnPage(fname=fname, datadir=DATA_DIR, params=params_fname)
-        assert kn.intersect(box01, box02)
-        assert kn.intersect(box01, box03)
-        assert not kn.intersect(box01, box03, 0, 0)
-        assert kn.intersect(box01, box03)
-        assert kn.intersect(box01, box04)
-        assert not kn.intersect(box01, box04, 0, 0)
-        assert kn.intersect(box01, box05)
-        assert not kn.intersect(box01, box05, 0, 0)
-        assert kn.intersect(box02, box03)
-        assert kn.intersect(box02, box04)
-        assert kn.intersect(box02, box05)
-        assert kn.intersect(box03, box04)
-        assert not kn.intersect(box03, box04, 0, 0)
-        assert kn.intersect(box03, box05)
-        assert not kn.intersect(box03, box05, 0, 0)
-        assert kn.intersect(box04, box05)
-        assert not kn.intersect(box04, box05, 0, 0)
+        kp = KnPage(knp)
+        assert kp.intersect(box01, box02)
+        assert kp.intersect(box01, box03)
+        assert not kp.intersect(box01, box03, 0, 0)
+        assert kp.intersect(box01, box03)
+        assert kp.intersect(box01, box04)
+        assert not kp.intersect(box01, box04, 0, 0)
+        assert kp.intersect(box01, box05)
+        assert not kp.intersect(box01, box05, 0, 0)
+        assert kp.intersect(box02, box03)
+        assert kp.intersect(box02, box04)
+        assert kp.intersect(box02, box05)
+        assert kp.intersect(box03, box04)
+        assert not kp.intersect(box03, box04, 0, 0)
+        assert kp.intersect(box03, box05)
+        assert not kp.intersect(box03, box05, 0, 0)
+        assert kp.intersect(box04, box05)
+        assert not kp.intersect(box04, box05, 0, 0)
 
+
+class TestSweepIncludedBoxes:
     def test_sweep_included_boxes(self, kn):
         result = kn.sweep_included_boxes(
             [box01, box02, box03, box04, box05, box06])
