@@ -179,8 +179,9 @@ def pytest_funcarg__kn005(request):
             "lr":           "right",
             "mavstd":       10,
             "pgmgn":        [0.05, 0.05],
-            "ismgn":        [15, 5],
+            "ismgn":        [5, 0],
             "toobig":       [200, 200],
+            "mcbs":         10,  # minimum collected box size
             "boundingRect": [16, 32],
             "mode":         "EXTERNAL",
             "method":       "NONE",

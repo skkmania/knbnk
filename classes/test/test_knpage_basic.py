@@ -116,15 +116,103 @@ class TestInterSect:
         assert not kp.intersect(box04, box05, 0, 0)
 
 
+class TestSweepInPageMargin:
+    def test_sweep_boxes_in_page_margin(self, kn005):
+        kn005.getBoxesAndCentroids()
+        kn005.sweep_boxes_in_page_margin()
+        kn005.sort_boxes()
+        kn005.write_boxes_to_file(fix='_trimed')
+
+
 class TestSweepIncludedBoxes:
-    def test_sweep_included_boxes(self, kn):
-        result = kn.sweep_included_boxes(
+    def test_sweep_included_boxes(self, knp):
+        kp = KnPage(knp)
+        result = kp.sweep_included_boxes(
             [box01, box02, box03, box04, box05, box06])
         assert len(result) == 5
 
-    def test_sweep_included_boxes_2(self, kn):
-        kn.sweep_included_boxes()
-        kn.write_boxes_to_file(DATA_DIR)
+    def test_sweep_included_boxes_2(self, kn005):
+        kn005.getBoxesAndCentroids()
+        kn005.sweep_boxes_in_page_margin()
+        kn005.sweep_included_boxes()
+        kn005.sort_boxes()
+        kn005.write_boxes_to_file(fix='_no_inclusion')
+
+
+class TestSortBoxes:
+    def test_sort_boxes(self, kn005):
+        kn005.getBoxesAndCentroids()
+        kn005.sort_boxes()
+        kn005.write_boxes_to_file(target=[100, 200])
+
+
+class TestSweepMaverickBoxes:
+    def test_sweep_maverick_boxes(self, kn005):
+        kn005.getBoxesAndCentroids()
+        kn005.sweep_boxes_in_page_margin()
+        kn005.sweep_included_boxes()
+        kn005.sweep_maverick_boxes()
+        kn005.sort_boxes()
+        kn005.write_boxes_to_file(fix='_no_mavericks')
+        kn005.sweep_maverick_boxes()
+        kn005.write_boxes_to_file(fix='_no_mavericks_2')
+        kn005.sweep_maverick_boxes()
+        kn005.write_boxes_to_file(fix='_no_mavericks_3')
+
+
+class TestCollectBoxes:
+    def test_collect_boxes(self, kn005):
+        kn005.getBoxesAndCentroids()
+        kn005.collect_boxes()
+        kn005.write_collected_boxes_to_file()
+        kn005.write_original_with_collected_boxes_to_file()
+
+
+class TestEstimateCharSize:
+    def test_estimate_char_size(self, kn005):
+        kn005.getBoxesAndCentroids()
+        kn005.collect_boxes()
+        kn005.estimate_char_size()
+
+
+class TestEstimateVerticalLines:
+    def test_estimate_vertical_lines(self, kn005):
+        kn005.getBoxesAndCentroids()
+        kn005.collect_boxes()
+        kn005.estimate_char_size()
+        kn005.estimate_vertical_lines()
+
+
+class TestEstimateRotateAngle:
+    def test_estimate_rotate_angle(self, kn005):
+        kn005.getBoxesAndCentroids()
+        kn005.collect_boxes()
+        kn005.estimate_char_size()
+        kn005.estimate_vertical_lines()
+        kn005.estimate_rotate_angle()
+
+
+class TestRotateImage:
+    def test_rotate_image(self, kn005):
+        kn005.getBoxesAndCentroids()
+        kn005.collect_boxes()
+        kn005.estimate_char_size()
+        kn005.estimate_vertical_lines()
+        kn005.estimate_rotate_angle()
+        kn005.rotate_image()
+        kn005.write_rotated_img_to_file()
+
+
+class TestRotateImageManyCase:
+    def test_rotate_image_many_case(self, kn005):
+        for x in [0.7, 0.75, 0.8, 0.85, 0.9]:
+           kn005.estimated_angle = x
+           kn005.rotate_image()
+           kn005.write_rotated_img_to_file(fix='_%f' % x)
+        for x in [0.7, 0.75, 0.8, 0.85, 0.9]:
+           kn005.estimated_angle = -1*x
+           kn005.rotate_image()
+           kn005.write_rotated_img_to_file(fix='_m%f' % x)
 
 
 class TestManipulateBoxes:
@@ -139,18 +227,12 @@ class TestManipulateBoxes:
         kn.write_original_with_collected_boxes_to_file(DATA_DIR)
 
     def test_write_boxes_to_file(self, kn):
-        kn.getCentroids()
+        kn.getBoxesAndCentroids()
         kn.write_boxes_to_file(DATA_DIR)
-
-    def test_collect_boxes(self, kn):
-        kn.collect_boxes()
-        kn.write_collected_boxes_to_file(DATA_DIR)
-        kn.write_original_with_collected_boxes_to_file(DATA_DIR)
-
 
 #class TestSeparate:
 #    def test_separate(self, kn):
-#        kn.getCentroids()
+#        kn.getBoxesAndCentroids()
 #        arr = kn.centroids
 #        x = range(1, len(arr))
 #        actual = kn.separate(arr, x)

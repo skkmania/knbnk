@@ -4,7 +4,8 @@ import cv2
 #import json
 import os.path
 import logging
-#from operator import itemgetter, attrgetter
+from operator import itemgetter
+from scipy import stats
 import knutil as ku
 import knparam as kr
 
@@ -67,6 +68,12 @@ class KnPage:
             self.pgmgn_x, self.pgmgn_y = self.parameters['pgmgn']
         else:
             self.pgmgn_x, self.pgmgn_y = [0.05, 0.05]
+        # collectされたのに小さすぎるのはなにかの間違いとして排除
+        #  mcbs : minimum collected box size
+        if 'mcbs' in self.p['page']:
+            self.mcbs = self.p['page']['mcbs']
+        else:
+            self.mcbs = 10
 
     def start(self):
         #self.getChars()
@@ -104,7 +111,7 @@ class KnPage:
             arr.append([x])
         return arr
 
-    def getCentroids(self, box_min=16, box_max=48):
+    def getBoxesAndCentroids(self, box_min=16, box_max=48):
         if not hasattr(self, 'contours'):
             self.getContours()
 
@@ -235,12 +242,24 @@ class KnPage:
         for cnt in self.contours:
             x, y, w, h = cv2.boundingRect(cnt)
 
-    def write_boxes_to_file(self, outdir):
-        om = np.zeros(self.img.shape, np.uint8)
-        for box in self.boxes:
-            x, y, w, h = box
-            cv2.rectangle(om, (x, y), (x + w, y + h), [0, 255, 0])
-        cv2.imwrite(ku.mkFilename(self, '_boxes', outdir), om)
+    def write_boxes_to_file(self, outdir=None, target=None, fix=None):
+        if outdir is None:
+            outdir = self.parameters['pagedir']
+        if target is None:
+            s, e = None, None
+        else:
+            s, e = target
+        boxes = self.boxes[s:e]
+        x_sorted_boxes = self.x_sorted_boxes[s:e]
+        y_sorted_boxes = self.y_sorted_boxes[s:e]
+        for t in [(boxes, '_boxes%s' % fix),
+                  (x_sorted_boxes, '_x_sorted_boxes%s' % fix),
+                  (y_sorted_boxes, '_y_sorted_boxes%s' % fix)]:
+            om = np.zeros(self.img.shape, np.uint8)
+            for box in t[0]:
+                x, y, w, h = box
+                cv2.rectangle(om, (x, y), (x + w, y + h), [0, 255, 0])
+            cv2.imwrite(ku.mkFilename(self, t[1], outdir), om)
 
     def write_data_file(self, outdir):
         if not hasattr(self, 'contours'):
@@ -345,12 +364,9 @@ class KnPage:
         if boxes is None:
             self.getContours()
             if len(self.boxes) == 0:
-                self.getCentroids()
+                self.getBoxesAndCentroids()
             boxes = self.boxes
             flag = True
-
-        # w, h どちらかが200以上のboxは排除
-        boxes = [x for x in boxes if (x[2] < 200) and (x[3] < 200)]
 
         temp_boxes = []
         while len(boxes) > 0:
@@ -362,6 +378,57 @@ class KnPage:
         if flag:
             self.boxes = temp_boxes
         return temp_boxes
+
+    def sort_boxes(self):
+        """
+        x_sorted : xの昇順、yの昇順に並べる
+        y_sorted : yの昇順、xの昇順に並べる
+        """
+        if not hasattr(self, 'boxes'):
+            self.getContours()
+            if len(self.boxes) == 0:
+                self.getBoxesAndCentroids()
+
+        self.x_sorted_boxes = sorted(self.boxes, key=itemgetter(0, 1))
+        self.y_sorted_boxes = sorted(self.boxes, key=itemgetter(1, 0))
+
+    def calc_box_distance(self):
+        """
+        sorted_boxesに、隣のboxとの距離情報を追加する
+        [box1, box2, box3, box4] ->
+          [(box1, d12), (box2, d23), (box3, d34), (box4, inf)]
+          dij : tuple : distance between boxi and boxj : (dx, dy)
+          inf : (10000, 10000) means infinity
+        """
+        #dist_x = [(x1 - x0)]
+
+    def get_neighbors(self, box, x, y):
+        """
+        self.boxesから、boxの近所にあるboxを選びそのリストを返す
+        近所とは、boxをx方向にx，y方向にy拡大した矩形と交わることとする
+        """
+        x0, y0, w, h = box
+        x1 = max(0, x0 - x)
+        y1 = max(0, y0 - y)
+        w = w + 2 * x
+        h = h + 2 * y
+        newbox = (x1, y1, w, h)
+        ret = [b for b in self.boxes if self.intersect(newbox, b, 0, 0)]
+        if box in ret:
+            ret.remove(box)
+        return ret
+
+    def sweep_maverick_boxes(self):
+        """
+        他のboxから離れて存在しているboxをself.boxesから排除する
+        """
+        boxes = self.boxes
+        for box in boxes:
+            neighbors = self.get_neighbors(box, 10, 20)
+            self.logger.debug('box: %s' % str(box))
+            self.logger.debug('# of neighbors: %d' % len(neighbors))
+            if len(neighbors) == 0:
+                self.boxes.remove(box)
 
     def flatten(self, i):
         return reduce(
@@ -408,7 +475,7 @@ class KnPage:
         else:
             return []
 
-    def write_self_boxes_to_file(self, outdir):
+    def write_self_boxes_data_to_txt_file(self, outdir):
         with open(ku.mkFilename(
                   self, '_self_boxes', outdir, '.txt'), 'w') as f:
             f.write("self.boxes\n")
@@ -416,35 +483,34 @@ class KnPage:
                 f.write(str(box) + "\n")
             f.write("\n")
 
-    def box_be_maveric(self, box):
-        """
-        box: [x, y, w, h]
-        """
-        # 大きいboxは対象外
-        if sum(box[2:4]) > self.mavstd:
-            return False
-
-    def box_in_page_margin(self, box):
-        """
-        box: [x, y, w, h]
-        """
-
+    def in_margin(self, box, le, ri, up, lo):
         x1, y1 = box[0:2]
         x2, y2 = map(sum, zip(box[0:2], box[2:4]))
+        return (y2 < up) or (y1 > lo) or (x2 < le) or (x1 > ri)
+
+    def sweep_boxes_in_page_margin(self, mgn=None):
+        """
+        pageの余白に存在すると思われるboxは排除
+        box: [x, y, w, h]
+        """
+
+        if mgn:
+            self.pgmgn_x, self.pgmgn_y = mgn
 
         left_mgn = self.width * self.pgmgn_x
         right_mgn = self.width * (1 - self.pgmgn_x)
         upper_mgn = self.height * self.pgmgn_y
         lower_mgn = self.height * (1 - self.pgmgn_y)
 
-        return (y2 < upper_mgn) or (y1 > lower_mgn) or\
-            (x2 < left_mgn) or (x1 > right_mgn)
+        self.boxes = [x for x in self.boxes if not self.in_margin(x,
+                           left_mgn, right_mgn, upper_mgn, lower_mgn)]
 
     def dispose_boxes(self, debug=False):
         """
-        不要なboxを捨てる
+        self.boxesから消せるものは消していく
         """
         # w, h どちらかが200以上のboxは排除
+        # これはgraphの存在するページでは問題か？
         if "toobig" in self.p["page"]:
             toobig_w, toobig_h = self.p['page']['toobig']
         else:
@@ -452,13 +518,13 @@ class KnPage:
         self.boxes = [x for x in self.boxes
                       if (x[2] < toobig_w) and (x[3] < toobig_h)]
 
-        # pageの余白に存在すると思われるboxは排除
-        self.boxes = [x for x in self.boxes
-                      if not self.box_in_page_margin(x)]
+        self.sweep_boxes_in_page_margin()
+
+        # 他のboxに包含されるboxは排除
+        self.sweep_included_boxes()
 
         # 小さく、隣接するもののないboxは排除
-        self.boxes = [x for x in self.boxes
-                      if not self.box_be_maveric(x)]
+        self.sweep_maverick_boxes()
 
     def collect_boxes(self):
         """
@@ -466,7 +532,7 @@ class KnPage:
         """
         self.logger.debug('enterd into KnPage#collect_boxes')
         if len(self.boxes) == 0:
-            self.getCentroids()
+            self.getBoxesAndCentroids()
 
         self.dispose_boxes()
 
@@ -479,8 +545,9 @@ class KnPage:
                     self.boxes.remove(x)
             adjs.append(abox)
             if len(adjs) > 0:
-                boundingBox = self.get_boundingBox(adjs)
-                self.collected_boxes.append(boundingBox)
+                wrapper = self.get_boundingBox(adjs)
+                if wrapper[2] > self.mcbs and wrapper[3] > self.mcbs:
+                    self.collected_boxes.append(wrapper)
 
     def collect_boxes_with_debug(self, outdir=None):
         """
@@ -488,14 +555,14 @@ class KnPage:
         """
         self.logger.debug('enterd into KnPage#collect_boxes_with_debug')
         if len(self.boxes) == 0:
-            self.getCentroids()
+            self.getBoxesAndCentroids()
 
         self.dispose_boxes(debug=True)
 
         if outdir is None:
             outdir = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data'
 
-        self.write_self_boxes_to_file(outdir)
+        self.write_self_boxes_data_to_txt_file(outdir)
 
         adjs = []
 
@@ -516,16 +583,20 @@ class KnPage:
                 adjs.append(abox)
                 f.write('adjs after append: ' + str(adjs) + "\n")
                 if len(adjs) > 0:
-                    boundingBox = self.get_boundingBox(adjs)
-                    f.write('boundingBox : '
-                            + str(boundingBox) + "\n")
-                    self.collected_boxes.append(boundingBox)
-                    f.write('self.collected_boxes : '
+                    wrapper = self.get_boundingBox(adjs)
+                    f.write('wrapper : '
+                            + str(wrapper) + "\n")
+                    if wrapper[2] > self.mcbs and wrapper[3] > self.mcbs:
+                        self.collected_boxes.append(wrapper)
+                        f.write('self.collected_boxes : '
                             + str(self.collected_boxes) + "\n")
 
     def write_collected_boxes_to_file(self, outdir=None):
         if not hasattr(self, 'collected_boxes'):
             self.collect_boxes()
+
+        if outdir is None:
+            outdir = self.parameters['pagedir']
 
         om = np.zeros(self.img.shape, np.uint8)
         for box in self.collected_boxes:
@@ -541,6 +612,9 @@ class KnPage:
             #self.boxes = self.collected_boxes
             #self.collect_boxes()
 
+        if outdir is None:
+            outdir = self.parameters['pagedir']
+
         self.orig_w_collected = self.img.copy()
         om = self.orig_w_collected
         for box in self.collected_boxes:
@@ -548,7 +622,7 @@ class KnPage:
             cv2.rectangle(om, (x, y), (x + w, y + h), [0, 0, 255])
         cv2.imwrite(ku.mkFilename(self, '_orig_w_collected_box', outdir), om)
 
-    def intersect(self, box1, box2, x_margin=20, y_margin=8):
+    def intersect(self, box1, box2, x_margin=None, y_margin=None):
         """
         box1 と box2 が交わるか接するならtrueを返す。
         marginを指定することですこし離れていても接すると判定.
@@ -581,3 +655,84 @@ class KnPage:
 
     def v_apart(self, ay1, ay2, by1, by2, ym):
         return ay2 < (by1 - ym) or (by2 + ym) < ay1
+
+    def estimate_char_size(self):
+        self.logger.debug("# of collected_boxes: %d" % len(self.collected_boxes))
+        self.logger.debug("# of centroids: %d" % len(self.centroids))
+        self.square_like_boxes = [x for x in self.collected_boxes if
+                             (x[2] * 0.8) < x[3] < (x[2] * 1.2)]
+        self.logger.debug("# of square_like_boxes: %d"
+                          % len(self.square_like_boxes))
+        self.estimated_width = max(map(lambda x: x[2], self.square_like_boxes))
+        self.estimated_height = max(map(lambda x: x[3], self.square_like_boxes))
+        self.logger.debug('estimated_width: %d' % self.estimated_width)
+        self.logger.debug('estimated_height: %d' % self.estimated_height)
+
+    def estimate_vertical_lines(self):
+        """
+        collected_boxesの重心をソートして、
+        ｘ座標がジャンプしているところ
+        (経験上、同じ行ならば20 pixel以上離れない）
+        (ここは試行錯誤が必要か？ルビや句点を同じ行とするための工夫？）
+        が行の切れ目だと判定し、
+        collected_boxesをグループ分けする
+        """
+        self.centroids = map(lambda x: (x[0] + x[2] / 2, x[1] + x[3] / 2),
+                             self.collected_boxes)
+        self.square_centroids = map(lambda x: (x[0] + x[2] / 2, x[1] + x[3] / 2),
+                             self.square_like_boxes)
+        self.logger.debug("# of square_centroids: %d"
+                          % len(self.square_centroids))
+        self.logger.debug("square_centroids: %s" % str(self.square_centroids))
+        self.square_centroids.sort(key=itemgetter(0,1))
+        self.box_by_v_lines = {}
+        self.box_by_v_lines[0] = [self.square_centroids[0]]
+        line_idx = 0
+        for c in self.square_centroids[1:]:
+            if c[0] - self.box_by_v_lines[line_idx][-1][0] <= 20:
+
+                self.box_by_v_lines[line_idx].append(c)
+            else:
+                line_idx += 1
+                self.box_by_v_lines[line_idx] = [c]
+
+        self.logger.debug('box_by_v_lines: %s' % str(self.box_by_v_lines))
+
+    def rotate_image(self):
+        image_center = tuple(np.array(self.img.shape[0:2]) / 2)
+        dsize = tuple(reversed(np.array(self.img.shape[0:2])))
+        if self.estimated_angle > 0:
+            degree = 180 * (np.pi / 2 - np.arctan(self.estimated_angle)) / np.pi
+            degree = degree * (-1.0)
+        else:
+            angle = (-1.0) * self.estimated_angle
+            degree = 180 * (np.pi / 2 - np.arctan(angle)) / np.pi
+
+        rot_mat = cv2.getRotationMatrix2D(image_center, degree, 1.0)
+        self.rotated_img = cv2.warpAffine(self.img, rot_mat,
+                                dsize, flags=cv2.INTER_LINEAR)
+
+    def estimate_rotate_angle(self):
+        slopes = []
+        for k, v in self.box_by_v_lines.items():
+            if len(v) > 10:
+                xi = map(itemgetter(0),v)
+                yi = map(itemgetter(1),v)
+                results = stats.linregress(xi,yi)
+                slopes.append(results[0])
+
+        self.logger.debug("slopes: %s" % str(slopes))
+        self.estimated_slope = np.mean(slopes)
+        self.logger.debug("avg of slopes: %f" % self.estimated_slope)
+        self.estimated_angle = np.arctan(self.estimated_slope)
+        self.logger.debug("estimated_angle: %f" % self.estimated_angle)
+
+    def write_rotated_img_to_file(self, outdir=None, fix=None):
+        if outdir is None:
+            outdir = self.parameters['pagedir']
+        cv2.imwrite(ku.mkFilename(self, '_rotated%s' % fix, outdir),
+                    self.rotated_img)
+
+    def in_margin(self, box, le, ri, up, lo):
+        x1, y1 = box[0:2]
+        x2, y2 = map(sum, zip(box[0:2], box[2:4]))

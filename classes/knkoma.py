@@ -719,38 +719,6 @@ class KnKoma:
         # (x,y,x+w,y+h) -> (x,y,x,y)
         return (x1, y1, x2 - x1, y2 - y1)
 
-    def sweep_included_boxes(self, boxes=None):
-        """
-        他のboxに完全に包含されるboxをリストから排除する
-        """
-        flag = False
-        if boxes is None:
-            self.getContours()
-            if len(self.boxes) == 0:
-                self.getCentroids()
-            boxes = self.boxes
-            flag = True
-
-        # w, h どちらかが200以上のboxは排除
-        boxes = [x for x in boxes if (x[2] < 200) and (x[3] < 200)]
-
-        temp_boxes = []
-        while len(boxes) > 0:
-            abox = boxes.pop()
-            boxes = [x for x in boxes if not self.include(abox, x)]
-            temp_boxes = [x for x in temp_boxes if not self.include(abox, x)]
-            temp_boxes.append(abox)
-
-        if flag:
-            self.boxes = temp_boxes
-        return temp_boxes
-
-    def flatten(self, i):
-        return reduce(
-            lambda a, b: a + (self.flatten(b) if hasattr(b, '__iter__')
-                              else [b]),
-            i, [])
-
     def show_message(f):
         def wrapper():
             print("function called")

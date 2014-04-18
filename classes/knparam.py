@@ -131,7 +131,7 @@ class KnParam(dict):
 
         self.mandatory_check()
 
-        nowstr = datetime.now().strftime("%Y%m%d_%I%M")
+        nowstr = datetime.now().strftime("%Y%m%d_%H%M")
         logging.basicConfig(filename=self['param']['logfilename']
                             + '_' + nowstr + '.log',
                             level=logging.DEBUG,
