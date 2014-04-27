@@ -68,7 +68,10 @@ def read_params(obj, params):
 def print_params_files(params_list):
     ret = []
     for params in params_list:
-        fname = params['param']['paramfname']
+        workdir = params['param']['workdir']
+        paramfdir = params['param']['paramfdir']
+        paramfname = params['param']['paramfname']
+        fname = "/".join([workdir, paramfdir, paramfname])
         with open(fname, 'w') as f:
             json.dump(params, f, sort_keys=False, indent=4)
             ret.append(fname)

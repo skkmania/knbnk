@@ -3,6 +3,7 @@ import logging
 import copy
 import os.path
 import json
+import pprint
 import knutil as ku
 import knbook as kb
 from datetime import datetime
@@ -129,17 +130,19 @@ class KnParam(dict):
             else:
                 raise KnParamParamsException('param_fname must be string.')
 
-        self.mandatory_check()
-
         nowstr = datetime.now().strftime("%Y%m%d_%H%M")
-        logging.basicConfig(filename=self['param']['logfilename']
+        logfilename = self['param']['outdir'] + '/'\
+            + self['param']['logfilename']
+        logging.basicConfig(filename=logfilename
                             + '_' + nowstr + '.log',
                             level=logging.DEBUG,
                             format='%(asctime)s %(message)s',
                             datefmt='%m/%d/%Y %I:%M:%S %p')
         #self.logger = logging.getLogger(self['book']['bookId'])
         self.logger = logging.getLogger('param')
-        self.logger.warning(str(self))
+        self.logger.warning("KnParam initialized :\n" + pprint.pformat(self))
+
+        self.mandatory_check()
 
     def read_paramf(self, param_fname):
         if os.path.exists(param_fname):

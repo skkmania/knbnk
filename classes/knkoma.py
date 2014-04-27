@@ -48,7 +48,7 @@ class KnKomaParamsException(Exception):
 
 class KnKoma:
 
-    def __init__(self, param):
+    def __init__(self, param=None):
         if param is None:
             raise KnKomaException('param must be specified.')
         else:
@@ -136,6 +136,14 @@ class KnKoma:
         return len(self.candidates['left']) > 0 and\
             len(self.candidates['center']) > 0 and\
             len(self.candidates['right']) > 0
+
+    def estimate_layouts(self):
+        """
+        komaに何ページあるのか調べる
+        副作用: self.layouts の設定
+        [str of each page's style]
+        """
+        self.layouts = ["graph", "graph"]
 
     def adjust_parameters(self):
         """
@@ -279,32 +287,24 @@ class KnKoma:
         binarize された配列を self.binarized にセットする
         parameters必須。
         """
+        self.logger.debug('enterd in getBinarized')
         if 'threshold' in self.parameters:
             thresh_low, thresh_high, typeval = self.parameters['threshold']
             ret, self.binarized =\
                 cv2.threshold(self.gray, thresh_low, thresh_high, typeval)
+            self.logger.debug('self.binarized created by threshold : %s',
+                              str(self.parameters['threshold']))
         elif 'canny' in self.parameters:
             minval, maxval, apertureSize = self.parameters['canny']
             self.binarized = cv2.Canny(self.gray, minval, maxval, apertureSize)
+            self.logger.debug('self.binarized created by canny : %s',
+                              str(self.parameters['canny']))
         elif 'adaptive' in self.parameters:
             self.binarized =\
                 cv2.adaptiveThreshold(self.gray,
                                       self.parameters['adaptive'])
-
-    def getGradients(self):
-        """
-        self.img のgradients を self.gradients_* にセットする
-        parameters必須。
-        """
-        if 'sobel' in self.parameters:
-            ddepth, dx, dy, ksize = self.parameters['sobel']
-            self.gradients_sobel = cv2.Sobel(self.gray, ddepth, dx, dy, ksize)
-        if 'scharr' in self.parameters:
-            ddepth, dx, dy = self.parameters['scharr']
-            self.gradients_scharr = cv2.Scharr(self.gray, ddepth, dx, dy)
-        if 'laplacian' in self.parameters:
-            ddepth = self.parameters['laplacian'][0]
-            self.gradients_laplacian = cv2.Laplacian(self.gray, ddepth)
+            self.logger.debug('self.binarized created by adaptive : %s',
+                              str(self.parameters['adaptive']))
 
     def getContours(self, thresh_low=50, thresh_high=255):
         """
@@ -351,9 +351,11 @@ class KnKoma:
 
     def getHoughLines(self):
         """
+        small_img_canny からHough lineを算出しておく
         戻り値: self.lines lineの配列
             この要素のlineは、(rho, theta). 2次元Hough space上の1点を指す
-            OpenCVの戻り値は[[[0,1],[0,2],...,[]]]と外側に配列があるが、この関数の戻り値はそれをひとつ外して
+            OpenCVの戻り値は[[[0,1],[0,2],...,[]]]と外側に配列があるが、
+            この関数の戻り値はそれをひとつ外して
             lineの配列としていることに注意。
             また、後々の処理の便宜のため、numpyのarrayからpythonのlistに変換し、
             theta, rhoの順に2段のkeyにもとづきsortしておく。
@@ -631,13 +633,6 @@ class KnKoma:
         for point in self.contours:
             x, y = point[0][0]
             cv2.circle(self.img_of_contours, (x, y), 1, [0, 0, 255])
-
-    def write_gradients(self, outdir):
-        for n in ['sobel', 'scharr', 'laplacian']:
-            if n in self.parameters:
-                outfilename = ku.mkFilename(self, '_' + n, outdir)
-                img = getattr(self, 'gradients_' + n)
-                cv2.imwrite(outfilename, img)
 
     def get_small_img_with_lines(self):
         self.small_img_with_lines = self.small_img.copy()

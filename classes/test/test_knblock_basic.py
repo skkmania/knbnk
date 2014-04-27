@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 import pytest
 import hamcrest as h
-from classes.knpage import KnPage
-from classes.knpage import KnPageException
-from classes.knpage import KnPageParamsException
+from classes.knpage import KnBlock
+from classes.knpage import KnBlockException
+from classes.knpage import KnBlockParamsException
 from classes.knutil import *
 
 HOME_DIR = '/home/skkmania'
@@ -24,19 +24,19 @@ box16 = (127, 37, 10, 10)
 
 class TestNew:
     def test_initialize_without_params(self):
-        with pytest.raises(KnPageException) as e:
-            KnPage()
+        with pytest.raises(KnBlockException) as e:
+            KnBlock()
         assert 'params is None' in str(e)
 
     def test_initialize_with_fname_not_existed(self):
-        with pytest.raises(KnPageParamsException) as e:
-        #with pytest.raises(KnPageException) as e:
-            KnPage(params='not_exist_file')
+        with pytest.raises(KnBlockParamsException) as e:
+        #with pytest.raises(KnBlockException) as e:
+            KnBlock(params='not_exist_file')
         assert 'not_exist_file' in str(e)
 
     def test_initialize_with_imcomplete_param_file(self):
-        with pytest.raises(KnPageParamsException) as e:
-            KnPage(params=DATA_DIR + '/imcomplete_sample.json')
+        with pytest.raises(KnBlockParamsException) as e:
+            KnBlock(params=DATA_DIR + '/imcomplete_sample.json')
         assert 'must be' in str(e)
 
     def test_new(self, kn):
@@ -96,7 +96,7 @@ class TestInterSect:
         box03 = (35, 45, 10, 10)
         box04 = (35, 20, 20, 20)
         box05 = (10, 45, 20, 20)
-        kp = KnPage(knp)
+        kp = KnBlock(knp)
         assert kp.intersect(box01, box02)
         assert kp.intersect(box01, box03)
         assert not kp.intersect(box01, box03, 0, 0)
@@ -116,7 +116,7 @@ class TestInterSect:
         assert not kp.intersect(box04, box05, 0, 0)
 
 
-class TestSweepInPageMargin:
+class TestSweepInBlockMargin:
     def test_sweep_boxes_in_page_margin(self, kn005):
         kn005.getBoxesAndCentroids()
         kn005.sweep_boxes_in_page_margin()
@@ -126,7 +126,7 @@ class TestSweepInPageMargin:
 
 class TestSweepIncludedBoxes:
     def test_sweep_included_boxes(self, knp):
-        kp = KnPage(knp)
+        kp = KnBlock(knp)
         result = kp.sweep_included_boxes(
             [box01, box02, box03, box04, box05, box06])
         assert len(result) == 5
@@ -229,3 +229,11 @@ class TestManipulateBoxes:
     def test_write_boxes_to_file(self, kn):
         kn.getBoxesAndCentroids()
         kn.write_boxes_to_file(DATA_DIR)
+
+#class TestSeparate:
+#    def test_separate(self, kn):
+#        kn.getBoxesAndCentroids()
+#        arr = kn.centroids
+#        x = range(1, len(arr))
+#        actual = kn.separate(arr, x)
+#        assert len(actual) > 0

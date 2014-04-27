@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #import os.path
 import pytest
+import copy
 #import json
 from classes.knparam import KnParam
 from classes.knpage import KnPage
@@ -10,6 +11,31 @@ import classes.knutil as ku
 
 DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data'
 
+
+Default_Param = {
+    "param": {
+        "arcdir":      DATA_DIR,
+        "workdir":     DATA_DIR
+    },
+    "book": {},
+    "koma": {
+        "scale_size":   640.0,
+        "hough":        [1, 2, 100],
+        "canny":        [50, 200, 3],
+    },
+    "page": {
+        "pagedir":      "/".join(['can_50_200', 'hgh_1_2_100', 'right']),
+        "lr":           "right",
+        "mavstd":       10,
+        "pgmgn":        [0.05, 0.05],
+        "ismgn":        [15, 5],
+        "toobig":       [200, 200],
+        "boundingRect": [16, 32],
+        "mode":         "EXTERNAL",
+        "method":       "NONE",
+        "canny":        [50, 200, 3]
+    }
+}
 
 def pytest_funcarg__knp(request):
     bookId = '1091460'
@@ -125,24 +151,6 @@ def pytest_funcarg__knpd(request):
     return KnParam(param_dict=params)
 
 
-def pytest_funcarg__kn(request):
-    bookId = 'twletters'
-    params = {
-        "scale_size":   640.0,
-        "boundingRect": [16, 32],
-        "mode":         "EXTERNAL",
-        "method":       "NONE",
-        "hough":        [1, 2, 100],
-        "canny":        [50, 200, 3],
-        "imgfname":     "/".join([DATA_DIR, bookId, "twletters.jpg"]),
-        "outdir":       "/".join([DATA_DIR, bookId]),
-        "paramfname":   "/".join([DATA_DIR, bookId, "twletters_01.json"]),
-        "outfilename":  "twl_can_50_200_hough_1_2_100"
-    }
-    ku.check_test_environment(params, bookId)
-    return KnPage(params=params['param']['paramfname'])
-
-
 def pytest_funcarg__kn005(request):
     param_dict = {
         "param": {
@@ -192,52 +200,111 @@ def pytest_funcarg__kn005(request):
     return KnPage(KnParam(param_dict))
 
 
-def pytest_funcarg__graph(request):
-    param_dict = {
+def pytest_funcarg__graph2(request):
+    """
+    両側とも全面挿絵のサンプル
+    """
+    param_dict = copy.deepcopy(Default_Param)
+    spec = {
         "param": {
-            "outdir":       "/".join([DATA_DIR, 'graph']),
+            "outdir":       "/".join([DATA_DIR, 'graph2']),
             "paramfname":   "/".join([DATA_DIR, "kn009.json"]),
             "logfilename": "/".join([DATA_DIR, "kn009"]),
-            "arcdir":      DATA_DIR,
-            "outdir":      "/".join([DATA_DIR, "graph"]),
-            "workdir":     DATA_DIR,
+            "outdir":      "/".join([DATA_DIR, "graph2"]),
             "paramfdir":   DATA_DIR,
-            "paramfname":  "/".join([DATA_DIR, "knp.json"]),
-            "balls":       ["graph"]
+            "paramfname":  "/".join([DATA_DIR, "kngraph2.json"]),
+            "balls":       ["graph2"]
         },
         "book": {
-            "bookdir":      "/".join([DATA_DIR, 'graph']),
-            "bookId":       "graph",
+            "bookdir":      "/".join([DATA_DIR, 'graph2']),
+            "bookId":       "graph2",
         },
         "koma": {
-            "scale_size":   640.0,
-            "imgfname":     "/".join([DATA_DIR, 'graph', "009.jpeg"]),
-            "komadir":      "/".join([DATA_DIR, 'graph', 'k009']),
+            "komadir":      "/".join([DATA_DIR, 'graph2', 'k009']),
             "komaId":       5,
             "komaIdStr":    "009",
-            "scale_size":   640.0,
-            "hough":        [1, 2, 100],
-            "canny":        [50, 200, 3],
             "imgfname":     "009.jpeg"
         },
         "page": {
-            "pagedir":      "/".join([DATA_DIR, 'graph', 'k009',
-                                      'can_50_200',
-                                      'hgh_1_2_100', 'right']),
             "imgfname":     "009_0.jpeg",
-            "lr":           "right",
-            "mavstd":       10,
-            "pgmgn":        [0.05, 0.05],
-            "ismgn":        [15, 5],
-            "toobig":       [200, 200],
-            "boundingRect": [16, 32],
-            "mode":         "EXTERNAL",
-            "method":       "NONE",
-            "canny":        [50, 200, 3]
         }
     }
-    ku.check_test_environment(param_dict, 'graph')
-    return KnPage(KnParam(param_dict))
+    for k, v in param_dict.items():
+        v.update(spec[k])
+    ku.check_test_environment(param_dict, 'graph2')
+    return KnParam(param_dict)
+
+
+def pytest_funcarg__b1g101(request):
+    """
+    両側とも全面挿絵のサンプル
+    """
+    param_dict = copy.deepcopy(Default_Param)
+    spec = {
+        "param": {
+            "logfilename": "kn021",
+            "arcdir":      DATA_DIR,
+            "outdir":      "/".join([DATA_DIR, "b1g101"]),
+            "workdir":     DATA_DIR,
+            "paramfdir":   "b1g101",
+            "paramfname":  "b1g101.json",
+            "balls":       ["b1g101"]
+        },
+        "book": {
+            "bookdir":      'b1g101',
+            "bookId":       "b1g101",
+        },
+        "koma": {
+            "komadir":      'k021',
+            "komaId":       21,
+            "komaIdStr":    "021",
+            "imgfname":     "021.jpeg"
+        },
+        "page": {
+            "imgfname":     "021_0.jpeg",
+        }
+    }
+    for k, v in param_dict.items():
+        v.update(spec[k])
+    ku.check_test_environment(param_dict, 'b1g101')
+    return KnParam(param_dict)
+
+
+def pytest_funcarg__b1g102(request):
+    """
+    両側とも全面挿絵のサンプル
+    """
+    param_dict = copy.deepcopy(Default_Param)
+    spec = {
+        "param": {
+            "logfilename": "kn106",
+            "arcdir":      DATA_DIR,
+            "outdir":      "/".join([DATA_DIR, "b1g102"]),
+            "workdir":     DATA_DIR,
+            "paramfdir":   "b1g102",
+            "paramfname":  "b1g102.json",
+            "balls":       ["b1g102"]
+        },
+        "book": {
+            "bookdir":      "b1g102",
+            "bookId":       "b1g102"
+        },
+        "koma": {
+            "komadir":      'k106',
+            "komaId":       106,
+            "komaIdStr":    "106",
+            "hough":        [1, 2, 100],
+            "canny":        [50, 200, 3],
+            "imgfname":     "106.jpeg"
+        },
+        "page": {
+            "imgfname":     "106_0.jpeg",
+        }
+    }
+    for k, v in param_dict.items():
+        v.update(spec[k])
+    ku.check_test_environment(param_dict, 'b1g102')
+    return KnParam(param_dict)
 
 
 def pytest_funcarg__knbk1(request):
