@@ -12,7 +12,7 @@
 import logging
 import knkoma as kk
 import knparam as kr
-#import knutil as ku
+import knutil as ku
 import shutil
 import os.path
 import json
@@ -63,10 +63,11 @@ class KnBook:
         self.arcdir = param['param']['arcdir']
         self.bookId = param['book']['bookId']
         self.bookdir = param['book']['bookdir']
-        self.logger = logging.getLogger('knbook')
+        self.logger = logging.getLogger(param['param']['logfilename'])
         self.expand()
         self.read_metadata()
 
+    @ku.deblog
     def start(self):
         self.logger.debug('KnBook started')
         self.expand()

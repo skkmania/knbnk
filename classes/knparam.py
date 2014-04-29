@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 import copy
+import os
 import os.path
 import json
 import pprint
@@ -133,13 +134,17 @@ class KnParam(dict):
         nowstr = datetime.now().strftime("%Y%m%d_%H%M")
         logfilename = self['param']['outdir'] + '/'\
             + self['param']['logfilename']
-        logging.basicConfig(filename=logfilename
-                            + '_' + nowstr + '.log',
-                            level=logging.DEBUG,
-                            format='%(asctime)s %(message)s',
-                            datefmt='%m/%d/%Y %I:%M:%S %p')
-        #self.logger = logging.getLogger(self['book']['bookId'])
-        self.logger = logging.getLogger('param')
+        logging.basicConfig()
+        file_handler = logging.FileHandler(
+            filename=logfilename + '_' + nowstr + '.log')
+        file_handler.setFormatter(
+            logging.Formatter('%(asctime)s %(name)s %(message)s',
+                              datefmt='%H:%M:%S'))
+        file_handler.level = logging.DEBUG
+
+        self.logger = logging.getLogger(self['param']['logfilename'])
+        self.logger.setLevel(logging.DEBUG)
+        self.logger.addHandler(file_handler)
         self.logger.warning("KnParam initialized :\n" + pprint.pformat(self))
 
         self.mandatory_check()
@@ -154,6 +159,7 @@ class KnParam(dict):
         else:
             raise KnParamParamsException(param_fname + ' not found.')
 
+    @ku.deblog
     def mandatory_check(self):
         for k, v in MandatoryFields.items():
             if not k in self.keys():
@@ -163,19 +169,23 @@ class KnParam(dict):
                     if not f in self[k].keys():
                         raise KnParamParamsException(f)
 
+    @ku.deblog
     def clone(self):
         tmp = {}
         for k in self:
             tmp[k] = copy.deepcopy(self[k])
         return KnParam(tmp)
 
+    @ku.deblog
     def start(self):
         self.check_environment()
         self.expand_tarballs()
 
+    @ku.deblog
     def check_environment(self):
         pass
 
+    @ku.deblog
     def expand_tarballs(self):
         for ball in self.ball_list():
             self.logger.debug(ball)

@@ -52,10 +52,10 @@ class KnPage:
                 self.read_parameter(param)
             else:
                 raise KnPageParamsException('param must be KnParam object')
-            self.get_img()
             self.lrstr = self.p.lrstr()
-            self.logger = logging.getLogger(self.lrstr)
+            self.logger = logging.getLogger(param['param']['logfilename'])
             self.collected_boxes = []
+            self.get_img()
 
     def read_parameter(self, param):
         self.p = param
@@ -75,6 +75,7 @@ class KnPage:
         else:
             self.mcbs = 10
 
+    @ku.deblog
     def start(self):
         #self.getChars()
         #self.layoutChars()
@@ -83,6 +84,7 @@ class KnPage:
         self.write_original_with_collected_boxes_to_file(d)
         pass
 
+    @ku.deblog
     def get_img(self):
         self.imgfname = "/".join([self.p['page']['pagedir'],
                                   self.p['page']['imgfname']])
@@ -128,6 +130,7 @@ class KnPage:
                (int(h) in range(box_min, box_max)):
                 self.centroids.append((x + w / 2, y + h / 2))
 
+    @ku.deblog
     def getBinarized(self):
         """
         binarize された配列を self.binarized にセットする
@@ -160,6 +163,7 @@ class KnPage:
             ddepth = self.parameters['laplacian'][0]
             self.gradients_laplacian = cv2.Laplacian(self.gray, ddepth)
 
+    @ku.deblog
     def getContours(self, thresh_low=50, thresh_high=255):
         """
         contourの配列を返す
@@ -344,6 +348,7 @@ class KnPage:
         else:
             return False
 
+    @ku.deblog
     def get_boundingBox(self, boxes):
         """
         入力のboxの形式は(x,y,w,h)
@@ -502,8 +507,9 @@ class KnPage:
         upper_mgn = self.height * self.pgmgn_y
         lower_mgn = self.height * (1 - self.pgmgn_y)
 
-        self.boxes = [x for x in self.boxes if not self.in_margin(x,
-                           left_mgn, right_mgn, upper_mgn, lower_mgn)]
+        self.boxes = [x for x in self.boxes
+                      if not self.in_margin(x, left_mgn,
+                                            right_mgn, upper_mgn, lower_mgn)]
 
     def dispose_boxes(self, debug=False):
         """
@@ -589,7 +595,7 @@ class KnPage:
                     if wrapper[2] > self.mcbs and wrapper[3] > self.mcbs:
                         self.collected_boxes.append(wrapper)
                         f.write('self.collected_boxes : '
-                            + str(self.collected_boxes) + "\n")
+                                + str(self.collected_boxes) + "\n")
 
     def write_collected_boxes_to_file(self, outdir=None):
         if not hasattr(self, 'collected_boxes'):
@@ -657,14 +663,16 @@ class KnPage:
         return ay2 < (by1 - ym) or (by2 + ym) < ay1
 
     def estimate_char_size(self):
-        self.logger.debug("# of collected_boxes: %d" % len(self.collected_boxes))
+        self.logger.debug("# of collected_boxes: %d"
+                          % len(self.collected_boxes))
         self.logger.debug("# of centroids: %d" % len(self.centroids))
         self.square_like_boxes = [x for x in self.collected_boxes if
-                             (x[2] * 0.8) < x[3] < (x[2] * 1.2)]
+                                  (x[2] * 0.8) < x[3] < (x[2] * 1.2)]
         self.logger.debug("# of square_like_boxes: %d"
                           % len(self.square_like_boxes))
         self.estimated_width = max(map(lambda x: x[2], self.square_like_boxes))
-        self.estimated_height = max(map(lambda x: x[3], self.square_like_boxes))
+        self.estimated_height = max(map(lambda x: x[3],
+                                        self.square_like_boxes))
         self.logger.debug('estimated_width: %d' % self.estimated_width)
         self.logger.debug('estimated_height: %d' % self.estimated_height)
 
@@ -679,12 +687,13 @@ class KnPage:
         """
         self.centroids = map(lambda x: (x[0] + x[2] / 2, x[1] + x[3] / 2),
                              self.collected_boxes)
-        self.square_centroids = map(lambda x: (x[0] + x[2] / 2, x[1] + x[3] / 2),
-                             self.square_like_boxes)
+        self.square_centroids = map(lambda x:
+                                    (x[0] + x[2] / 2, x[1] + x[3] / 2),
+                                    self.square_like_boxes)
         self.logger.debug("# of square_centroids: %d"
                           % len(self.square_centroids))
         self.logger.debug("square_centroids: %s" % str(self.square_centroids))
-        self.square_centroids.sort(key=itemgetter(0,1))
+        self.square_centroids.sort(key=itemgetter(0, 1))
         self.box_by_v_lines = {}
         self.box_by_v_lines[0] = [self.square_centroids[0]]
         line_idx = 0
@@ -702,7 +711,8 @@ class KnPage:
         image_center = tuple(np.array(self.img.shape[0:2]) / 2)
         dsize = tuple(reversed(np.array(self.img.shape[0:2])))
         if self.estimated_angle > 0:
-            degree = 180 * (np.pi / 2 - np.arctan(self.estimated_angle)) / np.pi
+            degree = 180 * (np.pi / 2 -
+                            np.arctan(self.estimated_angle)) / np.pi
             degree = degree * (-1.0)
         else:
             angle = (-1.0) * self.estimated_angle
@@ -710,15 +720,15 @@ class KnPage:
 
         rot_mat = cv2.getRotationMatrix2D(image_center, degree, 1.0)
         self.rotated_img = cv2.warpAffine(self.img, rot_mat,
-                                dsize, flags=cv2.INTER_LINEAR)
+                                          dsize, flags=cv2.INTER_LINEAR)
 
     def estimate_rotate_angle(self):
         slopes = []
         for k, v in self.box_by_v_lines.items():
             if len(v) > 10:
-                xi = map(itemgetter(0),v)
-                yi = map(itemgetter(1),v)
-                results = stats.linregress(xi,yi)
+                xi = map(itemgetter(0), v)
+                yi = map(itemgetter(1), v)
+                results = stats.linregress(xi, yi)
                 slopes.append(results[0])
 
         self.logger.debug("slopes: %s" % str(slopes))
@@ -732,7 +742,3 @@ class KnPage:
             outdir = self.parameters['pagedir']
         cv2.imwrite(ku.mkFilename(self, '_rotated%s' % fix, outdir),
                     self.rotated_img)
-
-    def in_margin(self, box, le, ri, up, lo):
-        x1, y1 = box[0:2]
-        x2, y2 = map(sum, zip(box[0:2], box[2:4]))

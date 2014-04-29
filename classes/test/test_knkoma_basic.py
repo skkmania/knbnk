@@ -94,22 +94,6 @@ class TestParams:
         params_file_name = DATA_DIR + '/twletters/twletters_01.json'
         return kk.KnKoma(fname, params=params_file_name)
 
-    def test_read_params(self, kn):
-        """
-          "outfilename"  : "twl_can_50_200",
-          "boundingRect" : [16, 32],
-          "mode"         : "EXTERNAL",
-          "method"       : "NONE",
-          "canny"        : [50, 200]
-        """
-        params = DATA_DIR + '/twletters/twletters_01.json'
-        ku.read_params(kn, params)
-        assert kn.parameters is not None
-        assert len(kn.parameters) == 12
-        assert kn.parameters['outfilename'] == "twl_can_50_200_hough_1_2_100"
-        assert kn.parameters['boundingRect'] == [16, 32]
-        assert kn.parameters['mode'] == "EXTERNAL"
-        assert kn.parameters['method'] == "NONE"
         assert kn.parameters['canny'] == [50, 200, 3]
 
     def test_new_with_params(self, kn2):

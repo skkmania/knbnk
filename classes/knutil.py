@@ -2,11 +2,9 @@
 import json
 import os.path
 import cv2
-import knpage as kp
-import knkoma as kk
 
-__all__ = ["read_params", "print_params_files", "check_test_environment",
-           "mkFilename", "mkoutfilename",
+__all__ = ["print_params_files", "check_test_environment",
+           "mkFilename", "mkoutfilename", "deblog",
            "KnUtilException", "KnUtilParamsException"]
 
 DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data'
@@ -40,29 +38,6 @@ class KnUtilParamsException(Exception):
 
     def __str__(self):
         return repr(self.value)
-
-
-def read_params(obj, params):
-    with open(params) as f:
-        lines = f.readlines()
-    obj.parameters = json.loads(''.join(lines))
-    try:
-        if isinstance(obj, (kp.KnPage, kk.KnKoma)):
-            obj.imgfname = obj.parameters['imgfname']
-            obj.outfilename = obj.parameters['outfilename']
-        obj.outdir = obj.parameters['outdir']
-        obj.paramfname = obj.parameters['paramfname']
-        obj.parameters['logfilename'] = obj.paramfname.replace('json', 'log')
-    except KeyError as e:
-        msg = 'key : %s must be in parameter file' % str(e)
-        print msg
-        raise KnUtilParamsException(msg)
-    if 'outfilename' in obj.parameters:
-        obj.outfilename = obj.parameters['outfilename']
-        if obj.outfilename == "auto":
-            obj.outfilename = mkoutfilename(obj.parameters)
-    else:
-        obj.outfilename = mkoutfilename(obj.parameters)
 
 
 def print_params_files(params_list):
@@ -151,12 +126,28 @@ def mkoutfilename(params, fix=None):
     else:
         return res
 
-    def write(obj, outfilename=None, om=None):
-        if om is None:
-            om = obj.img
-        if outfilename is None:
-            if hasattr(obj, 'outfilename'):
-                outfilename = obj.outfilename
-            else:
-                raise
-        cv2.imwrite(outfilename, om)
+
+def write(obj, outfilename=None, om=None):
+    if om is None:
+        om = obj.img
+    if outfilename is None:
+        if hasattr(obj, 'outfilename'):
+            outfilename = obj.outfilename
+        else:
+            raise
+    cv2.imwrite(outfilename, om)
+
+
+def deblog(func):
+    def wrapper(*args, **kwargs):
+        if "KNBNK_DEBUG" in os.environ:
+            args[0].logger.debug('%s entered.' % func.__name__)
+            if len(args) > 1:
+                for arg in args[1:]:
+                    args[0].logger.debug('with %s' % str(arg))
+        res = func(*args, **kwargs)
+        if "KNBNK_DEBUG" in os.environ:
+            args[0].logger.debug('%s ended.' % func.__name__)
+        print func.__name__, args, kwargs
+        return res
+    return wrapper
