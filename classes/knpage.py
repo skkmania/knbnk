@@ -4,6 +4,7 @@ import cv2
 #import json
 import os.path
 import logging
+import pprint
 from operator import itemgetter
 from scipy import stats
 import knutil as ku
@@ -53,7 +54,9 @@ class KnPage:
             else:
                 raise KnPageParamsException('param must be KnParam object')
             self.lrstr = self.p.lrstr()
-            self.logger = logging.getLogger(param['param']['logfilename'])
+            self.logger = logging.getLogger(param['param']['loggername'])
+            self.logger.warning("KnPage initialized :\n"
+                                + pprint.pformat(self.p))
             self.collected_boxes = []
             self.get_img()
 
@@ -74,6 +77,10 @@ class KnPage:
             self.mcbs = self.p['page']['mcbs']
         else:
             self.mcbs = 10
+        self.pagedir = "/".join([self.p['param']['workdir'],
+                                 self.p['book']['bookdir'],
+                                 self.p['koma']['komadir'],
+                                 self.p['page']['pagedir']])
 
     @ku.deblog
     def start(self):
@@ -86,8 +93,7 @@ class KnPage:
 
     @ku.deblog
     def get_img(self):
-        self.imgfname = "/".join([self.p['page']['pagedir'],
-                                  self.p['page']['imgfname']])
+        self.imgfname = "/".join([self.pagedir, self.p['page']['imgfname']])
         if os.path.exists(self.imgfname):
             self.img = cv2.imread(self.imgfname)
             if self.img is None:
@@ -106,6 +112,7 @@ class KnPage:
     def update(self, v):
         self.val = v
 
+    @ku.deblog
     def separate(self, arr, x):
         if x[1] - arr[-1][-1][1] < 15:
             arr[-1].append(x)
@@ -113,6 +120,7 @@ class KnPage:
             arr.append([x])
         return arr
 
+    @ku.deblog
     def getBoxesAndCentroids(self, box_min=16, box_max=48):
         if not hasattr(self, 'contours'):
             self.getContours()
@@ -148,6 +156,7 @@ class KnPage:
                 cv2.adaptiveThreshold(self.gray,
                                       self.parameters['adaptive'])
 
+    @ku.deblog
     def getGradients(self):
         """
         self.img のgradients を self.gradients_* にセットする
@@ -171,14 +180,39 @@ class KnPage:
         self.contours, self.hierarchy =\
             cv2.findContours(self.binarized,
                              cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        self.logger.debug('# of contours : %d' % len(self.contours))
 
+    @ku.deblog
     def writeContour(self):
         self.img_of_contours = np.zeros(self.img.shape, np.uint8)
         for point in self.contours:
             x, y = point[0][0]
             cv2.circle(self.img_of_contours, (x, y), 1, [0, 0, 255])
 
+    @ku.deblog
+    def getCentroids(self, box_min=16, box_max=48):
+        """
+        サイズが box_min から box_max のbounding box の重心の配列を返す
+        """
+        if not hasattr(self, 'contours'):
+            self.getContours()
+
+        if hasattr(self, 'parameters'):
+            if 'boundingRect' in self.parameters:
+                box_min, box_max = self.parameters['boundingRect']
+
+        for cnt in self.contours:
+            box = cv2.boundingRect(cnt)
+            self.boxes.append(box)
+            x, y, w, h = box
+            if (int(w) in range(box_min, box_max)) or\
+               (int(h) in range(box_min, box_max)):
+                self.centroids.append((x + w / 2, y + h / 2))
+
+    @ku.deblog
     def write_gradients(self, outdir=None):
+        if outdir is None:
+            outdir = self.pagedir
         for n in ['sobel', 'scharr', 'laplacian']:
             if n in self.parameters:
                 if not 'outfilename' in self.parameters:
@@ -192,6 +226,7 @@ class KnPage:
                 img = getattr(self, 'gradients_' + n)
                 cv2.imwrite(outfilename, img)
 
+    @ku.deblog
     def get_small_img_with_lines(self):
         self.small_img_with_lines = self.small_img.copy()
         self.getLinePoints()
@@ -199,6 +234,7 @@ class KnPage:
             cv2.line(self.small_img_with_lines,
                      line[0], line[1], (0, 0, 255), 2)
 
+    @ku.deblog
     def get_small_img_with_linesP(self):
         self.small_img_with_linesP = self.small_img.copy()
         for line in self.linesP[0]:
@@ -207,6 +243,7 @@ class KnPage:
             cv2.line(self.small_img_with_linesP,
                      pt1, pt2, (0, 0, 255), 2)
 
+    @ku.deblog
     def write_small_img(self, outdir):
         outfilename = ku.mkFilename(self, '_small_img', outdir)
         cv2.imwrite(outfilename, self.small_img)
@@ -215,19 +252,20 @@ class KnPage:
         outfilename = ku.mkFilename(self, '_small_img_canny', outdir)
         cv2.imwrite(outfilename, self.small_img_canny)
 
+    @ku.deblog
     def write_small_img_with_lines(self, outdir):
         outfilename = ku.mkFilename(self, '_small_img_with_lines', outdir)
         cv2.imwrite(outfilename, self.small_img_with_lines)
 
+    @ku.deblog
     def write_small_img_with_linesP(self, outdir):
         outfilename = ku.mkFilename(self, '_small_img_with_linesP', outdir)
         cv2.imwrite(outfilename, self.small_img_with_linesP)
 
+    @ku.deblog
     def write_contours_bounding_rect_to_file(self, outdir=None):
-        self.logger.debug('enterd in write_contours_bounding_rect_to_file')
         if not hasattr(self, 'contours'):
             self.getContours()
-        self.logger.debug('# of contours : %d' % len(self.contours))
         om = np.zeros(self.img.shape, np.uint8)
         for cnt in self.contours:
             x, y, w, h = cv2.boundingRect(cnt)
@@ -236,8 +274,11 @@ class KnPage:
                 self.centroids.append((x + w / 2, y + h / 2))
                 cv2.circle(om, (int(x + w / 2),
                                 int(y + h / 2)), 5, [0, 255, 0])
+        if outdir is None:
+            outdir = self.pagedir
         cv2.imwrite(ku.mkFilename(self, '_cont_rect', outdir), om)
 
+    @ku.deblog
     def count_contours_bounding_rects(self):
         self.logger.debug('enterd in count_contours_bounding_rects')
         if not hasattr(self, 'contours'):
@@ -246,9 +287,10 @@ class KnPage:
         for cnt in self.contours:
             x, y, w, h = cv2.boundingRect(cnt)
 
+    @ku.deblog
     def write_boxes_to_file(self, outdir=None, target=None, fix=None):
         if outdir is None:
-            outdir = self.parameters['pagedir']
+            outdir = self.pagedir
         if target is None:
             s, e = None, None
         else:
@@ -263,8 +305,11 @@ class KnPage:
             for box in t[0]:
                 x, y, w, h = box
                 cv2.rectangle(om, (x, y), (x + w, y + h), [0, 255, 0])
-            cv2.imwrite(ku.mkFilename(self, t[1], outdir), om)
+            outfilename = ku.mkFilename(self, t[1], outdir)
+            self.logger.debug('writing img to %s' % outfilename)
+            cv2.imwrite(outfilename, om)
 
+    @ku.deblog
     def write_data_file(self, outdir):
         if not hasattr(self, 'contours'):
             self.getContours()
@@ -280,13 +325,20 @@ class KnPage:
                 f.writelines(str(hic))
                 f.write("\n")
 
+    @ku.deblog
     def write_binarized_file(self, outdir=None):
+        if outdir is None:
+            outdir = self.pagedir
         if not hasattr(self, 'contours'):
             self.getContours()
         outfilename = ku.mkFilename(self, '_binarized', outdir)
+        self.logger.debug('writing img to %s' % outfilename)
         cv2.imwrite(outfilename, self.binarized)
 
+    @ku.deblog
     def write_original_with_contour_file(self, outdir=None):
+        if outdir is None:
+            outdir = self.pagedir
         if not hasattr(self, 'contours'):
             self.getContours()
         self.orig_w_cont = self.img.copy()
@@ -294,8 +346,10 @@ class KnPage:
             x, y = point[0][0]
             cv2.circle(self.orig_w_cont, (x, y), 1, [0, 0, 255])
         outfilename = ku.mkFilename(self, '_orig_w_cont', outdir)
+        self.logger.debug('writing img to %s' % outfilename)
         cv2.imwrite(outfilename, self.orig_w_cont)
 
+    @ku.deblog
     def write_original_with_contour_and_rect_file(self, outdir=None):
         if not hasattr(self, 'contours'):
             self.getContours()
@@ -311,9 +365,11 @@ class KnPage:
             cx, cy = cnt[0][0]
             cv2.circle(om, (cx, cy), 2, [0, 0, 255])
         outfilename = ku.mkFilename(self, '_orig_w_cont_and_rect', outdir)
+        self.logger.debug('writing img to %s' % outfilename)
         cv2.imwrite(outfilename, self.orig_w_cont_and_rect)
 
-    def write_all(self, outdir):
+    @ku.deblog
+    def write_all(self, outdir=None):
         """
         5つのfileを生成する
             出力0 :  statitics file  contourなどのデータのテキストファイル
@@ -323,6 +379,8 @@ class KnPage:
             出力4 :  contourのみを書いたファイル
             出力5 :  contourとそのboundingRectを重ね書きしたファイル
         """
+        if outdir is None:
+            outdir = self.pagedir
         self.write_data_file(outdir)
         self.write_binarized_file(outdir)
         self.write_contours_bounding_rect_to_file(outdir)
@@ -555,18 +613,18 @@ class KnPage:
                 if wrapper[2] > self.mcbs and wrapper[3] > self.mcbs:
                     self.collected_boxes.append(wrapper)
 
+    @ku.deblog
     def collect_boxes_with_debug(self, outdir=None):
         """
         bounding boxを包含するboxに統合し、文字を囲むboxの取得を試みる
         """
-        self.logger.debug('enterd into KnPage#collect_boxes_with_debug')
         if len(self.boxes) == 0:
             self.getBoxesAndCentroids()
 
         self.dispose_boxes(debug=True)
 
         if outdir is None:
-            outdir = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data'
+            outdir = self.pagedir
 
         self.write_self_boxes_data_to_txt_file(outdir)
 
@@ -597,19 +655,23 @@ class KnPage:
                         f.write('self.collected_boxes : '
                                 + str(self.collected_boxes) + "\n")
 
+    @ku.deblog
     def write_collected_boxes_to_file(self, outdir=None):
         if not hasattr(self, 'collected_boxes'):
             self.collect_boxes()
 
         if outdir is None:
-            outdir = self.parameters['pagedir']
+            outdir = self.pagedir
 
         om = np.zeros(self.img.shape, np.uint8)
         for box in self.collected_boxes:
             x, y, w, h = box
             cv2.rectangle(om, (x, y), (x + w, y + h), [0, 0, 255])
-        cv2.imwrite(ku.mkFilename(self, '_collected_box', outdir), om)
+        outfilename = ku.mkFilename(self, '_collected_box', outdir)
+        self.logger.debug('writing img to %s' % outfilename)
+        cv2.imwrite(outfilename, om)
 
+    @ku.deblog
     def write_original_with_collected_boxes_to_file(self, outdir=None):
         if not hasattr(self, 'collected_boxes'):
             self.collect_boxes()
@@ -619,7 +681,7 @@ class KnPage:
             #self.collect_boxes()
 
         if outdir is None:
-            outdir = self.parameters['pagedir']
+            outdir = self.pagedir
 
         self.orig_w_collected = self.img.copy()
         om = self.orig_w_collected
@@ -662,6 +724,7 @@ class KnPage:
     def v_apart(self, ay1, ay2, by1, by2, ym):
         return ay2 < (by1 - ym) or (by2 + ym) < ay1
 
+    @ku.deblog
     def estimate_char_size(self):
         self.logger.debug("# of collected_boxes: %d"
                           % len(self.collected_boxes))
@@ -676,6 +739,7 @@ class KnPage:
         self.logger.debug('estimated_width: %d' % self.estimated_width)
         self.logger.debug('estimated_height: %d' % self.estimated_height)
 
+    @ku.deblog
     def estimate_vertical_lines(self):
         """
         collected_boxesの重心をソートして、
@@ -707,6 +771,7 @@ class KnPage:
 
         self.logger.debug('box_by_v_lines: %s' % str(self.box_by_v_lines))
 
+    @ku.deblog
     def rotate_image(self):
         image_center = tuple(np.array(self.img.shape[0:2]) / 2)
         dsize = tuple(reversed(np.array(self.img.shape[0:2])))
@@ -722,6 +787,7 @@ class KnPage:
         self.rotated_img = cv2.warpAffine(self.img, rot_mat,
                                           dsize, flags=cv2.INTER_LINEAR)
 
+    @ku.deblog
     def estimate_rotate_angle(self):
         slopes = []
         for k, v in self.box_by_v_lines.items():
@@ -737,8 +803,9 @@ class KnPage:
         self.estimated_angle = np.arctan(self.estimated_slope)
         self.logger.debug("estimated_angle: %f" % self.estimated_angle)
 
+    @ku.deblog
     def write_rotated_img_to_file(self, outdir=None, fix=None):
         if outdir is None:
-            outdir = self.parameters['pagedir']
+            outdir = self.pagedir
         cv2.imwrite(ku.mkFilename(self, '_rotated%s' % fix, outdir),
                     self.rotated_img)

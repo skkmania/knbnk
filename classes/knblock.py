@@ -54,7 +54,7 @@ class KnBlock:
                 raise KnBlockParamsException('param must be KnParam object')
             self.get_img()
             self.lrstr = self.p.lrstr()
-            self.logger = logging.getLogger(self.lrstr)
+            self.logger = logging.getLogger(param['param']['loggername'])
             self.collected_boxes = []
 
     def read_parameter(self, param):

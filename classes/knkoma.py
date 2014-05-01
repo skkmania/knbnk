@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
+import pprint
 import os
 import sys
 import numpy as np
@@ -58,18 +59,26 @@ class KnKoma:
             else:
                 raise KnKomaParamsException('param must be KnParam object')
             self.komaIdStr = self.p.get_komaIdStr()
-            self.logger = logging.getLogger(self.komaIdStr)
+            self.logger = logging.getLogger(param['param']['loggername'])
+            self.logger.warning("KnKoma initialized :\n"
+                                + pprint.pformat(self.p))
+            self.komadir = '/'.join([param['param']['workdir'],
+                           param['book']['bookdir'],
+                           param['koma']['komadir']])
             self.workdir = self.p['koma']['komadir']
-            self.imgfname = "/".join([self.p['koma']['komadir'],
-                                      self.p['koma']['imgfname']])
+            if 'imgfullpath' in param['koma']:
+                self.imgfname = param['koma']['imgfullpath']
+            else:
+                self.imgfname = "/".join([self.komadir,
+                                          self.p['koma']['imgfname']])
             self.complemented = False
             self.get_img()
 
     def __exit__(self, type, value, traceback):
         self.logger.debug('exit')
 
+    @ku.deblog
     def start(self):
-        self.logger.debug('KnKoma started')
         self.adjust_parameters()
         self.set_original_corner_lines()
         self.get_page_img()
@@ -80,26 +89,23 @@ class KnKoma:
             p = self.p.clone_for_page(d)
             kp.KnPage(p).start()
 
+    @ku.deblog
     def mk_page_param_dicts(self):
-        pd0 = self.workdir + '/' + self.pagedirname['right']
-        pd1 = self.workdir + '/' + self.pagedirname['left']
         ret = [
             {
                 "lr": "right",
-                "pagedir": pd0,
-                "imgfname": pd0 +
-                '/' + self.p['koma']['komaIdStr'] + '_0.jpeg'},
+                "pagedir": self.pagedirname['right'],
+                "imgfname": self.p['koma']['komaIdStr'] + '_0.jpeg'},
             {
                 "lr": "left",
-                "pagedir": pd1,
-                "imgfname": pd1 +
-                '/' + self.p['koma']['komaIdStr'] + '_1.jpeg'}]
+                "pagedir": self.pagedirname['left'],
+                "imgfname": self.p['koma']['komaIdStr'] + '_1.jpeg'}]
         self.logger.debug('mk_page_param_dict returns : %s' % str(ret))
         self.page_param_dicts = ret
         return ret
 
+    @ku.deblog
     def get_img(self):
-        self.logger.debug('entered in get_img')
         if os.path.exists(self.imgfname):
             self.img = cv2.imread(self.imgfname)
             if self.img is None:
@@ -112,10 +118,10 @@ class KnKoma:
                                    'center': [], 'left': [], 'right': []}
                 self.gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
                 self.getBinarized()
-                self.logger.debug('successfully leaving from get_img.')
         else:
             raise KnKomaException('%s not found' % self.imgfname)
 
+    @ku.deblog
     def changeparam(self, cnt):
         rho, theta, minimumVote = self.parameters['hough']
         minimumVote = int(0.9 * minimumVote)
@@ -127,16 +133,19 @@ class KnKoma:
         self.logger.debug('hough : %s' % str(self.parameters['hough']))
         self.logger.debug('canny : %s' % str(self.parameters['canny']))
 
+    @ku.deblog
     def simply_divide_half(self):
         self.leftPage = self.img[:, :int(self.width / 2)]
         self.rightPage = self.img[:, int(self.width / 2):]
         self.write_page_img_to_file()
 
+    @ku.deblog
     def isCenterAmbiguous(self):
         return len(self.candidates['left']) > 0 and\
             len(self.candidates['center']) > 0 and\
             len(self.candidates['right']) > 0
 
+    @ku.deblog
     def estimate_layouts(self):
         """
         komaに何ページあるのか調べる
@@ -145,13 +154,13 @@ class KnKoma:
         """
         self.layouts = ["graph", "graph"]
 
+    @ku.deblog
     def adjust_parameters(self):
         """
         self.imgを分割しleftPage, rightPageを生成する
         その過程でparameterを調整する
         戻り値：なし
         """
-        self.logger.debug('entered in adjust_parameters')
         self.cornerLines = {}
         try_count = 0
         while try_count < 5:
@@ -178,13 +187,13 @@ class KnKoma:
             self.logger.debug('KnKoma#divide: retry over 5 times and gave up!')
             self.complement_corner_lines()
 
+    @ku.deblog
     def divide(self, param=None):
         """
         self.imgを分割しleftPage, rightPageを生成する
         入力値: string : KnPage生成に必要なparameter file name
         戻り値: なし
         """
-        self.logger.debug('entered in divide')
         self.cornerLines = {}
         try_count = 0
         while try_count < 5:
@@ -215,11 +224,13 @@ class KnKoma:
         self.get_page_img()
         self.write_page_img_to_file()
 
+    @ku.deblog
     def set_original_corner_lines(self):
         self.originalCorner = {}
         for d in ['upper', 'lower', 'center', 'right', 'left']:
             self.originalCorner[d] = int(self.cornerLines[d][0] / self.scale)
 
+    @ku.deblog
     def get_page_img(self):
         o = self.originalCorner
         self.leftPage = self.img[o['upper']:o['lower'],
@@ -227,6 +238,7 @@ class KnKoma:
         self.rightPage = self.img[o['upper']:o['lower'],
                                   o['center']:o['right']]
 
+    @ku.deblog
     def mk_page_dirname(self):
         self.pagedirname = {}
         if self.complemented:
@@ -234,19 +246,20 @@ class KnKoma:
             self.pagedirname['right'] = '/complemented/right'
             self.pagedirname['left'] = '/complemented/left'
         else:
-            ret = 'ss_%d' % self.scale_size
-            ret += '/can_%d_%d_%d' % tuple(self.parameters['canny'])
+            #ret = 'ss_%d' % self.scale_size
+            ret = 'can_%d_%d_%d' % tuple(self.parameters['canny'])
             ret += '/hgh_%d_%d_%d' % tuple(self.parameters['hough'])
             self.pagedirname['right'] = ret + '/right'
             self.pagedirname['left'] = ret + '/left'
 
+    @ku.deblog
     def mk_page_dir_and_write_img_file(self):
-        pagedir = self.page_param_dicts[0]['pagedir']
+        pagedir = '%s/%s' % (self.komadir, self.page_param_dicts[0]['pagedir'])
         if not os.path.exists(pagedir):
             os.makedirs(pagedir)
         cv2.imwrite(self.page_param_dicts[0]['imgfname'],
                     self.rightPage)
-        pagedir = self.page_param_dicts[1]['pagedir']
+        pagedir = '%s/%s' % (self.komadir, self.page_param_dicts[1]['pagedir'])
         if not os.path.exists(pagedir):
             os.makedirs(pagedir)
         cv2.imwrite(self.page_param_dicts[1]['imgfname'],
@@ -255,6 +268,7 @@ class KnKoma:
     def update(self, v):
         self.val = v
 
+    @ku.deblog
     def separate(self, arr, x):
         if x[1] - arr[-1][-1][1] < 15:
             arr[-1].append(x)
@@ -262,32 +276,12 @@ class KnKoma:
             arr.append([x])
         return arr
 
-    def getCentroids(self, box_min=16, box_max=48):
-        """
-        サイズが box_min から box_max のbounding box の重心の配列を返す
-        """
-        if not hasattr(self, 'contours'):
-            self.getContours()
-
-        if hasattr(self, 'parameters'):
-            # if self.parameters.has_key('boundingRect'):
-            if 'boundingRect' in self.parameters:
-                box_min, box_max = self.parameters['boundingRect']
-
-        for cnt in self.contours:
-            box = cv2.boundingRect(cnt)
-            self.boxes.append(box)
-            x, y, w, h = box
-            if (int(w) in range(box_min, box_max)) or\
-               (int(h) in range(box_min, box_max)):
-                self.centroids.append((x + w / 2, y + h / 2))
-
+    @ku.deblog
     def getBinarized(self):
         """
         binarize された配列を self.binarized にセットする
         parameters必須。
         """
-        self.logger.debug('enterd in getBinarized')
         if 'threshold' in self.parameters:
             thresh_low, thresh_high, typeval = self.parameters['threshold']
             ret, self.binarized =\
@@ -306,6 +300,7 @@ class KnKoma:
             self.logger.debug('self.binarized created by adaptive : %s',
                               str(self.parameters['adaptive']))
 
+    @ku.deblog
     def getContours(self, thresh_low=50, thresh_high=255):
         """
         contourの配列を返す
@@ -314,6 +309,7 @@ class KnKoma:
             cv2.findContours(self.binarized,
                              cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
+    @ku.deblog
     def prepareForLines(self):
         """
         縮小画像を作成
@@ -349,6 +345,7 @@ class KnKoma:
         self.theta = theta
         self.minimumVote = minimumVote
 
+    @ku.deblog
     def getHoughLines(self):
         """
         small_img_canny からHough lineを算出しておく
@@ -369,10 +366,12 @@ class KnKoma:
         else:
             self.lines = None
 
+    @ku.deblog
     def getHoughLinesP(self):
         self.linesP = cv2.HoughLinesP(self.small_img_canny,
                                       self.rho, self.theta, self.minimumVote)
 
+    @ku.deblog
     def getLinePoints(self):
         """
         HoughLinesで取得するlines は
@@ -393,6 +392,7 @@ class KnKoma:
             y2 = int(y0 - 1000 * (a))
             self.linePoints.append([(x1, y1), (x2, y2)])
 
+    @ku.deblog
     def compLine(self, line0, line1, horv):
         """
         line0, line1 の形式は2点指定式。[(x0,y0), (x1,y1)]
@@ -418,10 +418,12 @@ class KnKoma:
             else:
                 raise KnKomaException('wrong recognition of line')
 
+    @ku.deblog
     def partitionLines(self):
         self.horizLines = filter(self.isHorizontal, self.lines)
         self.vertLines = filter(self.isVertical, self.lines)
 
+    @ku.deblog
     def makeCandidates(self, umpire=None):
         if umpire is not None:
             pass
@@ -437,6 +439,7 @@ class KnKoma:
                             self.small_zone[direction][1]:
                         self.candidates[direction].append(line)
 
+    @ku.deblog
     def lineSeemsToExist(self, direction, umpire=None):
         if umpire is not None:
             pass
@@ -455,6 +458,7 @@ class KnKoma:
         self.logger.debug('candidates: %s' % str(self.candidates[direction]))
         return len(self.candidates[direction]) > 0
 
+    @ku.deblog
     def makeSmallZone(self, levels=None):
         """
         cornerLinesは経験上画像の4辺から、この程度離れたところに存在している
@@ -473,6 +477,7 @@ class KnKoma:
         for d in ['center', 'left', 'right']:
             self.small_zone[d] = [self.small_width * x for x in levels[d]]
 
+    @ku.deblog
     def enoughLines(self):
         komanumstr = self.p['koma']['komaIdStr']
         self.logger.info('# of self.lines in %s : %s' %
@@ -501,6 +506,7 @@ class KnKoma:
                         return False
         return True
 
+    @ku.deblog
     def selectLine(self, way, lines):
         if way == 'center':
             lines.sort(key=lambda x: abs((self.small_width / 2) - x[0]))
@@ -512,10 +518,10 @@ class KnKoma:
             elif way == 'max':
                 return lines[-1]
 
+    @ku.deblog
     def findCenterLine(self):
-        self.logger.debug('entered in findCenterLine:')
-        self.logger.debug(str(self.cornerLines))
-        self.logger.debug(str(self.candidates))
+        self.logger.debug('cornerLine: %s' % (str(self.cornerLines)))
+        self.logger.debug('candidate: %s' % (str(self.candidates)))
         diffOfPageWidth = lambda (left, center, right):\
             abs((right[0] - center[0]) - (center[0] - left[0]))
         tuplesOfVertLines =\
@@ -525,11 +531,11 @@ class KnKoma:
                    key=diffOfPageWidth)
         self.cornerLines['center'] = tuplesOfVertLines[0][1]
         self.logger.debug('just before exitting findCenterLine:')
-        self.logger.debug(str(self.cornerLines))
+        self.logger.debug('cornerLine: %s' % (str(self.cornerLines)))
 
+    @ku.deblog
     def findCornerLines(self):
-        self.logger.debug('entered in findCornerLines:')
-        self.logger.debug(str(self.cornerLines))
+        self.logger.debug('cornerLine: %s' % (str(self.cornerLines)))
         for (d, w) in [('upper', 'min'), ('lower', 'max'),
                        ('left', 'min'), ('right', 'max')]:
             lines = self.candidates[d]
@@ -540,12 +546,12 @@ class KnKoma:
             else:
                 self.cornerLines[d] = self.selectLine(w, lines)
         self.logger.debug('just before exitting findCornerLines:')
-        self.logger.debug(str(self.cornerLines))
+        self.logger.debug('cornerLine: %s' % (str(self.cornerLines)))
 
+    @ku.deblog
     def complement_corner_lines(self):
         half_pi = 1.5707963705062866
-        self.logger.debug('entered in complement_corner_lines:')
-        self.logger.debug(str(self.cornerLines))
+        self.logger.debug('cornerLine: %s' % (str(self.cornerLines)))
         self.findCornerLines()
         for d in ['upper', 'lower', 'left', 'right']:
             if (not (d in self.candidates)) or (len(self.candidates[d]) == 0):
@@ -561,9 +567,10 @@ class KnKoma:
                     self.cornerLines[d] = [int(self.small_width * 0.9), 0]
         self.cornerLines['center'] = [int(self.small_width * 0.5), 0]
         self.logger.debug('just before exitting complement_corner_lines:')
-        self.logger.debug(str(self.cornerLines))
+        self.logger.debug('cornerLine: %s' % (str(self.cornerLines)))
         self.complemented = True
 
+    @ku.deblog
     def findCornerLineP(self):
         a = self.linePoints
         vlines = [vline for vline in a if abs(vline[0][0] - vline[1][0]) < 50]
@@ -586,9 +593,11 @@ class KnKoma:
             if self.compLine(line, left_vline, 'v') == "left":
                 left_vline = line
 
+    @ku.deblog
     def findCenterLineP(self):
         pass
 
+    @ku.deblog
     def write_lines_to_file(self, outdir):
         if not hasattr(self, 'lines'):
             self.getHoughLines()
@@ -613,6 +622,7 @@ class KnKoma:
                 f.writelines(str(line))
                 f.write("\n")
 
+    @ku.deblog
     def write_linesP_to_file(self, outdir):
         if not hasattr(self, 'linesP'):
             self.getHoughLinesP()
@@ -628,12 +638,14 @@ class KnKoma:
                 f.writelines(str(line))
                 f.write("\n")
 
+    @ku.deblog
     def writeContour(self):
         self.img_of_contours = np.zeros(self.img.shape, np.uint8)
         for point in self.contours:
             x, y = point[0][0]
             cv2.circle(self.img_of_contours, (x, y), 1, [0, 0, 255])
 
+    @ku.deblog
     def get_small_img_with_lines(self):
         self.small_img_with_lines = self.small_img.copy()
         self.getLinePoints()
@@ -641,6 +653,7 @@ class KnKoma:
             cv2.line(self.small_img_with_lines,
                      line[0], line[1], (0, 0, 255), 2)
 
+    @ku.deblog
     def get_small_img_with_linesP(self):
         self.small_img_with_linesP = self.small_img.copy()
         for line in self.linesP[0]:
@@ -649,6 +662,7 @@ class KnKoma:
             cv2.line(self.small_img_with_linesP,
                      pt1, pt2, (0, 0, 255), 2)
 
+    @ku.deblog
     def write_small_img(self, outdir=None):
         outfilename = ku.mkFilename(self, '_small_img', outdir)
         cv2.imwrite(outfilename, self.small_img)
@@ -657,14 +671,17 @@ class KnKoma:
         outfilename = ku.mkFilename(self, '_small_img_canny', outdir)
         cv2.imwrite(outfilename, self.small_img_canny)
 
+    @ku.deblog
     def write_small_img_with_lines(self, outdir=None):
         outfilename = ku.mkFilename(self, '_small_img_with_lines', outdir)
         cv2.imwrite(outfilename, self.small_img_with_lines)
 
+    @ku.deblog
     def write_small_img_with_linesP(self, outdir=None):
         outfilename = ku.mkFilename(self, '_small_img_with_linesP', outdir)
         cv2.imwrite(outfilename, self.small_img_with_linesP)
 
+    @ku.deblog
     def write_data_file(self, outdir=None):
         if not hasattr(self, 'contours'):
             self.getContours()
@@ -680,12 +697,14 @@ class KnKoma:
                 f.writelines(str(hic))
                 f.write("\n")
 
+    @ku.deblog
     def write_binarized_file(self, outdir=None):
         if not hasattr(self, 'contours'):
             self.getContours()
         outfilename = ku.mkFilename(self, '_binarized', outdir)
         cv2.imwrite(outfilename, self.binarized)
 
+    @ku.deblog
     def include(self, box1, box2):
         """
            box1 が box2 を包含するならtrueを返す。
@@ -702,6 +721,7 @@ class KnKoma:
         else:
             return False
 
+    @ku.deblog
     def get_boundingBox(self, boxes):
         """
         入力のboxの形式は(x,y,w,h)
@@ -713,12 +733,6 @@ class KnKoma:
         d1, d2, x2, y2 = map(max, zip(*target))
         # (x,y,x+w,y+h) -> (x,y,x,y)
         return (x1, y1, x2 - x1, y2 - y1)
-
-    def show_message(f):
-        def wrapper():
-            print("function called")
-            return f()
-        return wrapper
 
     def isVertical(self, line):
         """
@@ -742,6 +756,7 @@ class KnKoma:
         else:
             return abs(line[1] - np.pi / 2) < 0.01
 
+    @ku.deblog
     def getIntersection(self, line1, line2):
         """
          Finds the intersection of two lines, or returns false.

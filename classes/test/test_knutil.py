@@ -22,3 +22,12 @@ class TestFileName:
 
     def test_write_data_file(self, kn):
         kn.write_data_file(DATA_DIR)
+
+
+class TestTmpDir:
+    def test_write(self, tmpdir):
+        dataDirectory = tmpdir.mkdir('data')
+        sampleFile = str(dataDirectory.join("sample.jpeg"))
+        ku.write(sampleFile)
+        assert 'sample.jpeg' in sampleFile
+        assert sampleFile != '/tmp/pytest-skkmania/data/sample.jpeg'

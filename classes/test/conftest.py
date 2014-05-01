@@ -4,9 +4,6 @@ import pytest
 import copy
 #import json
 from classes.knparam import KnParam
-from classes.knpage import KnPage
-#from classes.knkoma import KnKoma
-from classes.knbook import KnBook
 import classes.knutil as ku
 
 DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data'
@@ -24,7 +21,7 @@ Default_Param = {
         "canny":        [50, 200, 3],
     },
     "page": {
-        "pagedir":      "/".join(['can_50_200', 'hgh_1_2_100', 'right']),
+        "pagedir":      "/".join(['can_50_200_3', 'hgh_1_2_100', 'right']),
         "lr":           "right",
         "mavstd":       10,
         "pgmgn":        [0.05, 0.05],
@@ -37,167 +34,69 @@ Default_Param = {
     }
 }
 
+
 def pytest_funcarg__knp(request):
-    bookId = '1091460'
-    params = {
+    param_dict = copy.deepcopy(Default_Param)
+    spec = {
         "param": {
+            "logfilename": "kn021",
             "arcdir":      DATA_DIR,
-            "outdir":      "/".join([DATA_DIR, bookId]),
+            "outdir":      "/".join([DATA_DIR, "1091460"]),
             "workdir":     DATA_DIR,
-            "paramfdir":   DATA_DIR,
-            "paramfname":  "/".join([DATA_DIR, "knp.json"]),
-            "logfilename": "/".join([DATA_DIR, "knp"]),
-            #"balls":       ["1123003", "1142178", "1092905"]
-            "balls":       ["1741797", "1720450"]
-        },
-        "book": {
-            "bookdir":      "/".join([DATA_DIR, bookId]),
-            "bookId":       "1091460",
-        },
-        "koma": {
-            "komadir":      "/".join([DATA_DIR, bookId, 'k001']),
-            "komaId":       1,
-            "komaIdStr":    "001",
-            "scale_size":   640.0,
-            "hough":        [1, 2, 100],
-            "canny":        [50, 200, 3],
-            "imgfname":     "001.jpeg"
-        },
-        "page": {
-            "pagedir":      "/".join([DATA_DIR, bookId, 'k001',
-                                      'can_50_200',
-                                      'hgh_1_2_100', 'right']),
-            "imgfname":     "001_0.jpeg",
-            "lr":           "right",
-            "mavstd":       10,
-            "pgmgn":        [0.05, 0.05],
-            "ismgn":        [15, 5],
-            "toobig":       [200, 200],
-            "boundingRect": [16, 32],
-            "mode":         "EXTERNAL",
-            "method":       "NONE",
-            "canny":        [50, 200, 3]
-        },
-        "layout": {
-        },
-        "char": {
-        }
-    }
-    ku.check_test_environment(params, bookId)
-    return KnParam(param_fname=params['param']['paramfname'])
-
-
-def pytest_funcarg__knpd(request):
-    bookId = '1091460'
-    params = {
-        "param": {
-            "arcdir":      DATA_DIR,
-            "outdir":      "/".join([DATA_DIR, bookId]),
-            "workdir":     DATA_DIR,
-            "paramfdir":   DATA_DIR,
-            "paramfname":  "/".join([DATA_DIR, "knbk1.json"]),
-            "logfilename": "/".join([DATA_DIR, bookId, "knbk1"]),
+            "paramfdir":   "1091460",
+            "paramfname":  "knp.json",
             "balls":       ["1091460"]
         },
         "book": {
-            "bookdir":      "/".join([DATA_DIR, bookId]),
-            "bookId":       "1091460",
+            "bookdir":      '1091460',
+            "bookId":       "1091460"
         },
         "koma": {
-            "komadir":      "/".join([DATA_DIR, bookId, 'k001']),
+            "komadir":      'k001',
             "komaId":       1,
             "komaIdStr":    "001",
-            "scale_size":   640.0,
-            "hough":        [1, 2, 100],
-            "canny":        [50, 200, 3],
-            "imgfname":     "/".join([DATA_DIR, bookId, "001.jpeg"]),
+            "imgfname":     "001.jpeg"
         },
         "page": {
-            "pagedir":      "/".join([DATA_DIR, bookId, 'k001',
-                                      'can_50_200',
-                                      'hgh_1_2_100', 'right']),
-            "imgfname":     "/".join([DATA_DIR, bookId,
-                                      "pagedir", "001_0.jpeg"]),
-            "lr": "right",
-            "boundingRect": [16, 32],
-            "mode":         "EXTERNAL",
-            "method":       "NONE",
-        },
-        "layout": {
-        },
-        "char": {
-        },
-        "spec": {
-            "001": {
-                "imgfname":     "/".join([DATA_DIR, bookId, "001.jpeg"]),
-                "0": {
-                    "imgfname":     "/".join([DATA_DIR, bookId, "001_0.jpeg"]),
-                },
-                "1": {
-                    "imgfname":     "/".join([DATA_DIR, bookId, "001_1.jpeg"]),
-                },
-            },
-            "002": {
-                "0": {},
-                "1": {}
-            },
-            "003": {
-                "0": {},
-                "1": {}
-            }
+            "imgfname":     "001_0.jpeg"
         }
     }
-    ku.check_test_environment(params, bookId)
-    return KnParam(param_dict=params)
+    for k, v in param_dict.items():
+        v.update(spec[k])
+    ku.check_test_environment(param_dict, '1091460')
+    return KnParam(param_dict)
 
 
 def pytest_funcarg__kn005(request):
-    param_dict = {
+    param_dict = copy.deepcopy(Default_Param)
+    spec = {
         "param": {
-            "outdir":       "/".join([DATA_DIR, 'twletters']),
-            "paramfname":   "/".join([DATA_DIR, "kn005.json"]),
-            "logfilename": "/".join([DATA_DIR, "kn005"]),
+            "logfilename": "kn005",
             "arcdir":      DATA_DIR,
             "outdir":      "/".join([DATA_DIR, "twletters"]),
             "workdir":     DATA_DIR,
-            "paramfdir":   DATA_DIR,
-            "paramfname":  "/".join([DATA_DIR, "knp.json"]),
+            "paramfdir":   "twletters",
+            "paramfname":  "twlkn005.json",
             "balls":       ["twletters"]
         },
         "book": {
-            "bookdir":      "/".join([DATA_DIR, 'twletters']),
-            "bookId":       "twletters",
+            "bookdir":      "twletters",
+            "bookId":       "twletters"
         },
         "koma": {
-            "scale_size":   640.0,
-            "imgfname":     "/".join([DATA_DIR, 'twletters', "005.jpeg"]),
-            "komadir":      "/".join([DATA_DIR, 'twletters', 'k005']),
+            "komadir":      'k005',
             "komaId":       5,
             "komaIdStr":    "005",
-            "scale_size":   640.0,
-            "hough":        [1, 2, 100],
-            "canny":        [50, 200, 3],
             "imgfname":     "005.jpeg"
         },
         "page": {
-            "pagedir":      "/".join([DATA_DIR, 'twletters', 'k005',
-                                      'can_50_200',
-                                      'hgh_1_2_100', 'right']),
-            "imgfname":     "005_0.jpeg",
-            "lr":           "right",
-            "mavstd":       10,
-            "pgmgn":        [0.05, 0.05],
-            "ismgn":        [5, 0],
-            "toobig":       [200, 200],
-            "mcbs":         10,  # minimum collected box size
-            "boundingRect": [16, 32],
-            "mode":         "EXTERNAL",
-            "method":       "NONE",
-            "canny":        [50, 200, 3]
+            "imgfname":     "005_0.jpeg"
         }
     }
+    for k, v in param_dict.items():
+        v.update(spec[k])
     ku.check_test_environment(param_dict, 'twletters')
-    return KnPage(KnParam(param_dict))
+    return KnParam(param_dict)
 
 
 def pytest_funcarg__graph2(request):
@@ -207,21 +106,21 @@ def pytest_funcarg__graph2(request):
     param_dict = copy.deepcopy(Default_Param)
     spec = {
         "param": {
-            "outdir":       "/".join([DATA_DIR, 'graph2']),
-            "paramfname":   "/".join([DATA_DIR, "kn009.json"]),
-            "logfilename": "/".join([DATA_DIR, "kn009"]),
+            "logfilename": "kngraph2_009",
+            "arcdir":      DATA_DIR,
             "outdir":      "/".join([DATA_DIR, "graph2"]),
-            "paramfdir":   DATA_DIR,
-            "paramfname":  "/".join([DATA_DIR, "kngraph2.json"]),
+            "workdir":     DATA_DIR,
+            "paramfdir":   "graph2",
+            "paramfname":  "kngraph2.json",
             "balls":       ["graph2"]
         },
         "book": {
-            "bookdir":      "/".join([DATA_DIR, 'graph2']),
-            "bookId":       "graph2",
+            "bookdir":      "graph2",
+            "bookId":       "graph2"
         },
         "koma": {
-            "komadir":      "/".join([DATA_DIR, 'graph2', 'k009']),
-            "komaId":       5,
+            "komadir":      'k009',
+            "komaId":       9,
             "komaIdStr":    "009",
             "imgfname":     "009.jpeg"
         },
@@ -293,12 +192,10 @@ def pytest_funcarg__b1g102(request):
             "komadir":      'k106',
             "komaId":       106,
             "komaIdStr":    "106",
-            "hough":        [1, 2, 100],
-            "canny":        [50, 200, 3],
             "imgfname":     "106.jpeg"
         },
         "page": {
-            "imgfname":     "106_0.jpeg",
+            "imgfname":     "106_0.jpeg"
         }
     }
     for k, v in param_dict.items():
@@ -308,50 +205,35 @@ def pytest_funcarg__b1g102(request):
 
 
 def pytest_funcarg__knbk1(request):
-    DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data'
-    bookId = '1091460'
-    params = {
+    param_dict = copy.deepcopy(Default_Param)
+    spec = {
         "param": {
+            "logfilename": "knbk1",
             "arcdir":      DATA_DIR,
-            "outdir":      "/".join([DATA_DIR, bookId]),
+            "outdir":      "/".join([DATA_DIR, "1091460"]),
             "workdir":     DATA_DIR,
-            "paramfdir":   DATA_DIR,
-            "paramfname":  "/".join([DATA_DIR, "knbk1.json"]),
-            "logfilename": "/".join([DATA_DIR, bookId, "knbk1.log"]),
+            "paramfdir":   "1091460",
+            "paramfname":  "knbk1.json",
             "balls":       ["1091460"]
         },
         "book": {
-            "bookdir":      "/".join([DATA_DIR, bookId]),
-            "bookId":       "1091460",
+            "bookdir":      "1091460",
+            "bookId":       "1091460"
         },
         "koma": {
-            "komadir":      "/".join([DATA_DIR, bookId, 'k001']),
+            "komadir":      'k001',
             "komaId":       1,
             "komaIdStr":    "001",
-            "scale_size":   640.0,
-            "hough":        [1, 2, 100],
-            "canny":        [50, 200, 3],
-            "imgfname":     "/".join([DATA_DIR, bookId, "001.jpeg"]),
+            "imgfname":     "001.jpeg"
         },
         "page": {
-            "pagedir":      "/".join([DATA_DIR, bookId, 'k001',
-                                      'can_50_200',
-                                      'hgh_1_2_100', 'right']),
-            "imgfname":     "/".join([DATA_DIR, bookId,
-                                      "pagedir", "001_0.jpeg"]),
-            "lr": "right",
-            "boundingRect": [16, 32],
-            "mode":         "EXTERNAL",
-            "method":       "NONE",
-        },
-        "layout": {
-        },
-        "char": {
+            "imgfname":     "001_0.jpeg"
         }
     }
-    ku.check_test_environment(params, bookId)
-    param = KnParam(param_fname=params['param']['paramfname'])
-    return KnBook(param)
+    for k, v in param_dict.items():
+        v.update(spec[k])
+    ku.check_test_environment(param_dict, "1091460")
+    return KnParam(param_dict)
 
 
 def pytest_runtest_setup(item):

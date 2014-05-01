@@ -10,6 +10,7 @@
 #     以下は任意
 #   }
 import logging
+import pprint
 import knkoma as kk
 import knparam as kr
 import knutil as ku
@@ -62,44 +63,72 @@ class KnBook:
             raise KnBookParamsException('param must be a KnParam object.')
         self.arcdir = param['param']['arcdir']
         self.bookId = param['book']['bookId']
-        self.bookdir = param['book']['bookdir']
-        self.logger = logging.getLogger(param['param']['logfilename'])
+        self.bookdir = "/".join([param['param']['workdir'],
+                                 param['book']['bookdir']])
+        self.logger = logging.getLogger(param['param']['loggername'])
+        self.logger.warning("KnBook initialized :\n" + pprint.pformat(self.p))
         self.expand()
         self.read_metadata()
+        self.check_komanum()
 
     @ku.deblog
     def start(self):
-        self.logger.debug('KnBook started')
-        self.expand()
-        self.read_metadata()
-        self.logger.debug('komanum: %s', str(self.komanum))
+        self.logger.debug('# of koma in this book: %s', str(self.komanum))
         for k in range(1, self.komanum + 1):
-            komaIdStr = self.p.set_komaId(current=k, last=self.komanum + 1)
-            self.p.set_imgfname(current=k, last=self.komanum + 1)
-            imgfname = self.set_environment_for_koma(komaIdStr)
-            p = self.p.clone_for_koma({
-                'komadir': self.bookdir + '/k' + komaIdStr,
-                'komaId': k,
-                'komaIdStr': komaIdStr,
-                'imgfname':  imgfname
-            })
-            koma = kk.KnKoma(p)
+            self.set_environment_for_a_koma(k)
+            koma = kk.KnKoma(self.make_parameter_for_a_koma(k))
             koma.start()
 
-    def set_environment_for_koma(self, komaIdStr):
+    @ku.deblog
+    def generate_a_koma(self, kid):
+        """
+        book内のコマのうち、kidで指定した番号のコマを生成する
+          コマのdirectory を作成する。
+          KnKoma objectを作成するためのparameter を作成する
+          KnKoma objectを作成する
+
+        戻り値： 作成した KnKoma object
+        """
+        self.set_environment_for_a_koma(kid)
+        p = self.make_parameter_for_a_koma(kid)
+        return kk.KnKoma(p)
+
+    @ku.deblog
+    def set_environment_for_a_koma(self, idx):
+        komaIdStr = str(idx).zfill(3)
         workdir_for_koma = "/".join([self.bookdir, 'k' + komaIdStr])
         if not os.path.exists(workdir_for_koma):
             os.mkdir(workdir_for_koma)
         imgfname = self.bookdir + '/' + komaIdStr + self.ext
-        shutil.move(imgfname, workdir_for_koma)
+
+        if not os.path.exists(workdir_for_koma + '/' + komaIdStr + self.ext):
+            shutil.move(imgfname, workdir_for_koma)
         return workdir_for_koma + '/' + komaIdStr + self.ext
 
+    @ku.deblog
+    def make_parameter_for_a_koma(self, idx):
+        komaIdStr = str(idx).zfill(3)
+        p = self.p.clone_for_koma({
+            'komadir': 'k' + komaIdStr,
+            'komaId': idx,
+            'komaIdStr': komaIdStr,
+            'imgfname':  komaIdStr + self.ext
+        })
+        ret = kr.KnParam(p)
+        ret.set_logger(name=komaIdStr, logfilename=self.bookdir
+                       + '/k' + komaIdStr + '/test.log')
+        return ret
+
+    @ku.deblog
     def expand(self):
-        self.logger.debug('enterd into KnBook#expand')
+        """
+        tarballを展開する
+        """
         if os.path.exists(self.arcdir + '/tmp'):
             os.system('rm -fr "%s"' % self.arcdir + '/tmp')
         else:
             os.mkdir(self.arcdir + '/tmp')
+
         if not os.path.exists(self.bookdir):
             cmd = 'tar jxf %s/%s.tar.bz2 -C %s/tmp' % (
                 self.arcdir, self.bookId, self.arcdir)
@@ -117,6 +146,7 @@ class KnBook:
                 (self.arcdir, self.bookId, self.bookdir)
             self.logger.debug('cmd: %s', cmd)
             os.system(cmd)
+
         if os.path.exists(self.bookdir + '/001.jpeg'):
             self.ext = '.jpeg'
         elif os.path.exists(self.bookdir + '/001.jpg'):
@@ -124,9 +154,9 @@ class KnBook:
         else:
             raise 'KnBook#expand: image file 001 not found'
 
+    @ku.deblog
     def read_metadata(self):
-        self.metafname = (self.p['book']['bookdir']
-                          + '/common_' + self.p.bookId() + '.json')
+        self.metafname = '%s/common_%s.json' % (self.bookdir, self.bookId)
         if os.path.exists(self.metafname):
             with open(self.metafname) as f:
                 lines = f.readlines()
@@ -136,6 +166,23 @@ class KnBook:
             raise KnBookException('metadata file "%s" not found.'
                                   % self.metafname)
 
+    @ku.deblog
+    def check_komanum(self):
+        """
+        metadataで読んだlastContentNo と
+        展開した画像ファイルの数が一致するかチェック
+        一致しなければlogに警告を記載しておく.
+        画像のあるidx だけを集めたリストをself.koma_indicies として保持する
+        """
+        self.koma_indicies = range(1, self.komanum + 1)
+        for idx in self.koma_indicies:
+            filename = '%s/%s%s' % (self.bookdir, str(idx).zfill(3), self.ext)
+            if not os.path.exists(filename):
+                self.logger.warning('!!! image file %s.%s not found!!!' %
+                                    (str(idx), self.ext))
+                self.koma_indicies.remove(idx)
+
+    @ku.deblog
     def divide_all(self):
         """
         book内の全コマをdivideする
@@ -147,20 +194,13 @@ class KnBook:
             koma = kk.KnKoma(param=self.p)
             koma.divide()
 
-    def divide_a_koma(self, komanum):
-        """
-        book内のコマのうち、komanumで指定した番号のコマをdivideする
-        コマのObjectは保存しない。
-        戻り値：KnPage objectのtuple(leftPage, rightPage)
-        """
-        koma = kk.KnKoma(param=self.p, komanum=komanum)
-        return koma.divide()
-
+    @ku.deblog
     def collect_all(self):
         for k in self.komas:
             for p in k.pages:
                 p.collect_boxes()
 
+    @ku.deblog
     def layout_all(self):
         for k in self.komas:
             for p in k.pages:

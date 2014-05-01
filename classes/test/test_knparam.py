@@ -33,11 +33,6 @@ class TestNew:
         knp.logger.debug(str(knp))
         assert knp['param']['workdir'] == DATA_DIR
 
-    def test_new_from_dict(self, knpd):
-        logging.basicConfig(level=logging.DEBUG)
-        knpd.logger.debug(str(knpd))
-        assert knpd['param']['workdir'] == DATA_DIR
-
 
 class TestClone:
     def test_clone(self, knp):

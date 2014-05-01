@@ -3,9 +3,8 @@ import json
 import os.path
 import cv2
 
-__all__ = ["print_params_files", "check_test_environment",
-           "mkFilename", "mkoutfilename", "deblog",
-           "KnUtilException", "KnUtilParamsException"]
+__all__ = ["print_params_files", "check_test_environment", "mkFilename",
+           "deblog", "KnUtilException", "KnUtilParamsException"]
 
 DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data'
 
@@ -93,38 +92,12 @@ def mkFilename(obj, fix, outdir=None, ext=None):
 
         if hasattr(obj, 'outfilename'):
             name = obj.outfilename
-            if name == "auto":
-                name = mkoutfilename(obj.parameters)
         name = name + fix
 
     if outdir is None:
         return os.path.join(dirname, name + ext)
     else:
         return os.path.join(outdir, name + ext)
-
-
-def mkoutfilename(params, fix=None):
-    res = 'o_' + os.path.basename(params['imgfname']).split('.')[0]
-    keys = params.keys()
-    if 'scale_size' in keys:
-        res += "_ss_" + str(int(params['scale_size']))
-
-    if 'hough' in keys:
-        res += "_hgh_" + "_".join(map(str, params['hough']))
-
-    if 'canny' in keys:
-        res += "_can_" + "_".join(map(str, params['canny']))
-
-    if 'sobel' in keys:
-        res += "_sob_" + "_".join(map(str, params['sobel']))
-
-    if 'scharr' in keys:
-        res += "_sch_" + "_".join(map(str, params['scharr']))
-
-    if fix:
-        return res + fix
-    else:
-        return res
 
 
 def write(obj, outfilename=None, om=None):
@@ -141,13 +114,17 @@ def write(obj, outfilename=None, om=None):
 def deblog(func):
     def wrapper(*args, **kwargs):
         if "KNBNK_DEBUG" in os.environ:
-            args[0].logger.debug('%s entered.' % func.__name__)
+            args[0].logger.debug('*IN* %s#%s.' %
+                                 (args[0].__class__.__name__, func.__name__))
             if len(args) > 1:
                 for arg in args[1:]:
                     args[0].logger.debug('with %s' % str(arg))
+            if len(kwargs) > 0:
+                for k, v in kwargs.items():
+                    args[0].logger.debug('with %s=%s' % (k, str(v)))
         res = func(*args, **kwargs)
         if "KNBNK_DEBUG" in os.environ:
-            args[0].logger.debug('%s ended.' % func.__name__)
+            args[0].logger.debug('*OUT* %s.' % func.__name__)
         print func.__name__, args, kwargs
         return res
     return wrapper

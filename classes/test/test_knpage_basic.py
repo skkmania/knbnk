@@ -2,9 +2,9 @@
 import pytest
 import hamcrest as h
 from classes.knpage import KnPage
-from classes.knpage import KnPageException
-from classes.knpage import KnPageParamsException
-from classes.knutil import *
+#from classes.knpage import KnPageException
+#from classes.knpage import KnPageParamsException
+import classes.knutil as ku
 
 HOME_DIR = '/home/skkmania'
 DATA_DIR = HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data/twletters'
@@ -24,69 +24,57 @@ box16 = (127, 37, 10, 10)
 
 class TestNew:
     def test_initialize_without_params(self):
-        with pytest.raises(KnPageException) as e:
+        with pytest.raises(TypeError) as e:
             KnPage()
-        assert 'params is None' in str(e)
+        assert '2 arguments' in str(e)
 
-    def test_initialize_with_fname_not_existed(self):
-        with pytest.raises(KnPageParamsException) as e:
-        #with pytest.raises(KnPageException) as e:
-            KnPage(params='not_exist_file')
-        assert 'not_exist_file' in str(e)
+    def test_new(self, knp):
+        kp = KnPage(knp)
+        assert kp.img is not None
+        assert kp.img.shape != (100, 100, 3)
+        assert kp.img.shape == (2789, 3466, 3)
+        assert kp.height == 2789
+        assert kp.width == 3466
+        assert kp.depth == 3
+        assert kp.gray is not None
+        assert kp.binarized is not None
 
-    def test_initialize_with_imcomplete_param_file(self):
-        with pytest.raises(KnPageParamsException) as e:
-            KnPage(params=DATA_DIR + '/imcomplete_sample.json')
-        assert 'must be' in str(e)
-
-    def test_new(self, kn):
-        assert kn.img is not None
-        assert kn.img.shape != (100, 100, 3)
-        assert kn.img.shape == (558, 669, 3)
-        assert kn.height == 558
-        assert kn.width == 669
-        assert kn.depth == 3
-        assert kn.gray is not None
-        assert kn.binarized is not None
-
-    def test_new_try_hamcrest(self, kn):
-        h.assert_that(kn.height, h.equal_to(558))
-
-
-class TestTmpDir:
-    def test_write(self, kn, tmpdir):
-        dataDirectory = tmpdir.mkdir('data')
-        sampleFile = str(dataDirectory.join("sample.jpeg"))
-        kn.write(sampleFile)
-        assert 'sample.jpeg' in sampleFile
-        assert sampleFile != '/tmp/pytest-skkmania/data/sample.jpeg'
+    def test_new_try_hamcrest(self, knp):
+        kp = KnPage(knp)
+        h.assert_that(kp.height, h.equal_to(2789))
 
 
 class TestFileName:
-    def test_mkFilename(self, kn):
-        name = mkFilename(kn, '_cont')
-        expect = DATA_DIR + '/twl_can_50_200_hough_1_2_100_cont.jpg'
+    def test_mkFilename(self, knp):
+        kn = KnPage(knp)
+        name = ku.mkFilename(kn, '_cont')
+        expect = '/'.join([HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data',
+                 '1091460/k001/can_50_200/hgh_1_2_100/right/001_0_cont.jpeg'])
         assert name == expect
 
-    def test_write_data_file(self, kn):
-        kn.write_data_file(DATA_DIR)
+    def test_write_data_file(self, knp):
+        kn = KnPage(knp)
+        kn.write_data_file(kn.pagedir)
 
 
 class TestBoundingRect:
-    def test_write_contours_bounding_rect_to_file(self, kn):
-        kn.write_contours_bounding_rect_to_file(DATA_DIR)
+    def test_write_contours_bounding_rect_to_file(self, b1g101):
+        knp = KnPage(b1g101)
+        knp.write_contours_bounding_rect_to_file()
 
-    def test_get_boundingBox(self, kn):
-        outer_box = kn.get_boundingBox([box01, box02, box03])
+    def test_get_boundingBox(self, b1g101):
+        knp = KnPage(b1g101)
+        outer_box = knp.get_boundingBox([box01, box02, box03])
         assert outer_box == (20, 30, 25, 25)
-        outer_box = kn.get_boundingBox([box01, box02, box03, box04, box05])
+        outer_box = knp.get_boundingBox([box01, box02, box03, box04, box05])
         assert outer_box == (10, 20, 45, 45)
 
-    def test_include(self, kn):
-        assert not kn.include(box01, box02)
-        assert not kn.include(box01, box03)
-        assert not kn.include(box01, box04)
-        assert kn.include(box02, box06)
+    def test_include(self, b1g101):
+        knp = KnPage(b1g101)
+        assert not knp.include(box01, box02)
+        assert not knp.include(box01, box03)
+        assert not knp.include(box01, box04)
+        assert knp.include(box02, box06)
 
 
 class TestInterSect:
@@ -118,10 +106,11 @@ class TestInterSect:
 
 class TestSweepInPageMargin:
     def test_sweep_boxes_in_page_margin(self, kn005):
-        kn005.getBoxesAndCentroids()
-        kn005.sweep_boxes_in_page_margin()
-        kn005.sort_boxes()
-        kn005.write_boxes_to_file(fix='_trimed')
+        kn = KnPage(kn005)
+        kn.getBoxesAndCentroids()
+        kn.sweep_boxes_in_page_margin()
+        kn.sort_boxes()
+        kn.write_boxes_to_file(fix='_trimed')
 
 
 class TestSweepIncludedBoxes:
@@ -132,100 +121,119 @@ class TestSweepIncludedBoxes:
         assert len(result) == 5
 
     def test_sweep_included_boxes_2(self, kn005):
-        kn005.getBoxesAndCentroids()
-        kn005.sweep_boxes_in_page_margin()
-        kn005.sweep_included_boxes()
-        kn005.sort_boxes()
-        kn005.write_boxes_to_file(fix='_no_inclusion')
+        kn = KnPage(kn005)
+        kn.getBoxesAndCentroids()
+        kn.sweep_boxes_in_page_margin()
+        kn.sweep_included_boxes()
+        kn.sort_boxes()
+        kn.write_boxes_to_file(fix='_no_inclusion')
+
+    def test_sweep_included_boxes_3(self, b1g101):
+        kn = KnPage(b1g101)
+        kn.getBoxesAndCentroids()
+        kn.sweep_boxes_in_page_margin()
+        kn.sweep_included_boxes()
+        kn.sort_boxes()
+        kn.write_boxes_to_file(fix='_no_inclusion')
+
+    def test_sweep_included_boxes_4(self, b1g102):
+        kn = KnPage(b1g102)
+        kn.getBoxesAndCentroids()
+        kn.sweep_boxes_in_page_margin()
+        kn.sweep_included_boxes()
+        kn.sort_boxes()
+        kn.write_boxes_to_file(fix='_no_inclusion')
 
 
 class TestSortBoxes:
     def test_sort_boxes(self, kn005):
-        kn005.getBoxesAndCentroids()
-        kn005.sort_boxes()
-        kn005.write_boxes_to_file(target=[100, 200])
+        kn = KnPage(kn005)
+        kn.getBoxesAndCentroids()
+        kn.sort_boxes()
+        kn.write_boxes_to_file(target=[100, 200])
 
 
 class TestSweepMaverickBoxes:
     def test_sweep_maverick_boxes(self, kn005):
-        kn005.getBoxesAndCentroids()
-        kn005.sweep_boxes_in_page_margin()
-        kn005.sweep_included_boxes()
-        kn005.sweep_maverick_boxes()
-        kn005.sort_boxes()
-        kn005.write_boxes_to_file(fix='_no_mavericks')
-        kn005.sweep_maverick_boxes()
-        kn005.write_boxes_to_file(fix='_no_mavericks_2')
-        kn005.sweep_maverick_boxes()
-        kn005.write_boxes_to_file(fix='_no_mavericks_3')
+        kn = KnPage(kn005)
+        kn.getBoxesAndCentroids()
+        kn.sweep_boxes_in_page_margin()
+        kn.sweep_included_boxes()
+        kn.sweep_maverick_boxes()
+        kn.sort_boxes()
+        kn.write_boxes_to_file(fix='_no_mavericks')
+        kn.sweep_maverick_boxes()
+        kn.write_boxes_to_file(fix='_no_mavericks_2')
+        kn.sweep_maverick_boxes()
+        kn.write_boxes_to_file(fix='_no_mavericks_3')
 
 
 class TestCollectBoxes:
     def test_collect_boxes(self, kn005):
-        kn005.getBoxesAndCentroids()
-        kn005.collect_boxes()
-        kn005.write_collected_boxes_to_file()
-        kn005.write_original_with_collected_boxes_to_file()
+        kn = KnPage(kn005)
+        kn.getBoxesAndCentroids()
+        kn.collect_boxes()
+        kn.write_collected_boxes_to_file()
+        kn.write_original_with_collected_boxes_to_file()
 
 
 class TestEstimateCharSize:
     def test_estimate_char_size(self, kn005):
-        kn005.getBoxesAndCentroids()
-        kn005.collect_boxes()
-        kn005.estimate_char_size()
+        kn = KnPage(kn005)
+        kn.getBoxesAndCentroids()
+        kn.collect_boxes()
+        kn.estimate_char_size()
 
 
 class TestEstimateVerticalLines:
     def test_estimate_vertical_lines(self, kn005):
-        kn005.getBoxesAndCentroids()
-        kn005.collect_boxes()
-        kn005.estimate_char_size()
-        kn005.estimate_vertical_lines()
+        kn = KnPage(kn005)
+        kn.getBoxesAndCentroids()
+        kn.collect_boxes()
+        kn.estimate_char_size()
+        kn.estimate_vertical_lines()
 
 
 class TestEstimateRotateAngle:
     def test_estimate_rotate_angle(self, kn005):
-        kn005.getBoxesAndCentroids()
-        kn005.collect_boxes()
-        kn005.estimate_char_size()
-        kn005.estimate_vertical_lines()
-        kn005.estimate_rotate_angle()
+        kn = KnPage(kn005)
+        kn.getBoxesAndCentroids()
+        kn.collect_boxes()
+        kn.estimate_char_size()
+        kn.estimate_vertical_lines()
+        kn.estimate_rotate_angle()
 
 
 class TestRotateImage:
     def test_rotate_image(self, kn005):
-        kn005.getBoxesAndCentroids()
-        kn005.collect_boxes()
-        kn005.estimate_char_size()
-        kn005.estimate_vertical_lines()
-        kn005.estimate_rotate_angle()
-        kn005.rotate_image()
-        kn005.write_rotated_img_to_file()
+        kn = KnPage(kn005)
+        kn.getBoxesAndCentroids()
+        kn.collect_boxes()
+        kn.estimate_char_size()
+        kn.estimate_vertical_lines()
+        kn.estimate_rotate_angle()
+        kn.rotate_image()
+        kn.write_rotated_img_to_file()
 
 
 class TestRotateImageManyCase:
     def test_rotate_image_many_case(self, kn005):
+        kn = KnPage(kn005)
         for x in [0.7, 0.75, 0.8, 0.85, 0.9]:
-            kn005.estimated_angle = x
-            kn005.rotate_image()
-            kn005.write_rotated_img_to_file(fix='_%f' % x)
+            kn.estimated_angle = x
+            kn.rotate_image()
+            kn.write_rotated_img_to_file(fix='_%f' % x)
         for x in [0.7, 0.75, 0.8, 0.85, 0.9]:
-            kn005.estimated_angle = -1 * x
-            kn005.rotate_image()
-            kn005.write_rotated_img_to_file(fix='_m%f' % x)
+            kn.estimated_angle = -1 * x
+            kn.rotate_image()
+            kn.write_rotated_img_to_file(fix='_m%f' % x)
 
 
 class TestManipulateBoxes:
-    def test_get_adj_boxes(self, kn):
+    def test_get_adj_boxes(self, kn005):
+        kn = KnPage(kn005)
         boxes = [box01, box02, box03, box04, box05, box06,
                  box11, box12, box13, box14, box15, box16]
         result = kn.get_adj_boxes(boxes, box01)
         assert list(set(result) -
                     set([box01, box02, box03, box04, box05, box06])) == []
-
-    def test_write_original_with_contour_and_rect_file(self, kn):
-        kn.write_original_with_collected_boxes_to_file(DATA_DIR)
-
-    def test_write_boxes_to_file(self, kn):
-        kn.getBoxesAndCentroids()
-        kn.write_boxes_to_file(DATA_DIR)

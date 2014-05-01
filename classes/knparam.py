@@ -130,23 +130,7 @@ class KnParam(dict):
                 self.read_paramf(param_fname)
             else:
                 raise KnParamParamsException('param_fname must be string.')
-
-        nowstr = datetime.now().strftime("%Y%m%d_%H%M")
-        logfilename = self['param']['outdir'] + '/'\
-            + self['param']['logfilename']
-        logging.basicConfig()
-        file_handler = logging.FileHandler(
-            filename=logfilename + '_' + nowstr + '.log')
-        file_handler.setFormatter(
-            logging.Formatter('%(asctime)s %(name)s %(message)s',
-                              datefmt='%H:%M:%S'))
-        file_handler.level = logging.DEBUG
-
-        self.logger = logging.getLogger(self['param']['logfilename'])
-        self.logger.setLevel(logging.DEBUG)
-        self.logger.addHandler(file_handler)
-        self.logger.warning("KnParam initialized :\n" + pprint.pformat(self))
-
+        #self.set_logger()
         self.mandatory_check()
 
     def read_paramf(self, param_fname):
@@ -159,7 +143,6 @@ class KnParam(dict):
         else:
             raise KnParamParamsException(param_fname + ' not found.')
 
-    @ku.deblog
     def mandatory_check(self):
         for k, v in MandatoryFields.items():
             if not k in self.keys():
@@ -174,7 +157,9 @@ class KnParam(dict):
         tmp = {}
         for k in self:
             tmp[k] = copy.deepcopy(self[k])
-        return KnParam(tmp)
+        ret = KnParam(tmp)
+        ret.set_logger(self['param']['loggername'])
+        return ret
 
     @ku.deblog
     def start(self):
@@ -269,27 +254,6 @@ class KnParam(dict):
             if not k in self.raw.keys():
                 raise KnParamParamsException(k)
 
-    def mkKomaParam(self, komanum):
-        if komanum < 1000:
-            komanumstr = str(komanum).zfill(3)
-        else:
-            komanumstr = str(komanum).zfill(4)
-        params = {}
-        params['komanumstr'] = komanumstr
-        params['paramfname'] = self['param']['outdir']\
-            + '/k_' + komanumstr + '.json'
-        params['imgfname'] = self['param']['outdir'] + '/'\
-            + komanumstr + '.jpeg'
-        params['outdir'] = self['param']['outdir']
-        params['outfilename'] = "auto"
-        params['mode'] = "EXTERNAL"
-        params['method'] = "NONE"
-        params['hough'] = [1, 2, 100]
-        params['canny'] = [50, 200, 3]
-        params['scale_size'] = 640.0
-        ku.print_params_files([params])
-        return params['param']['paramfname']
-
     def get_numOfKoma(self):
         return self['book']['numOfKoma']
 
@@ -314,26 +278,45 @@ class KnParam(dict):
         else:
             return self['koma']['imgfname']
 
-    def set_imgfname(self, current, last):
-        if last < 1000:
-            komaIdStr = str(current).zfill(3)
-        else:
-            komaIdStr = str(current).zfill(4)
-        self['koma']['imgfname'] = "/".join(
-            [self['param']['workdir'], 'k' + komaIdStr, komaIdStr + ".jpeg"])
-
     def set_lr(self, lr):
         self['page']['lr'] = lr
 
     def lrstr(self):
         return self['page']['lr']
 
+    @ku.deblog
     def clone_for_page(self, page):
+        self.logger.debug("page :\n" + pprint.pformat(page))
         ret = self.clone()
         ret['page'].update(page)
+        self.logger.debug("self :\n" + pprint.pformat(self))
         return ret
 
+    @ku.deblog
     def clone_for_koma(self, koma):
         ret = self.clone()
         ret['koma'].update(koma)
         return ret
+
+    def set_logger(self, name, logfilename=None):
+        nowstr = datetime.now().strftime("%Y%m%d_%H%M")
+        logging.basicConfig()
+        self['param']['loggername'] = name
+
+        if logfilename is None:
+            logfilename = self['param']['outdir'] + '/'\
+                + self['param']['logfilename']
+            file_handler = logging.FileHandler(
+                filename=logfilename + '_' + nowstr + name + '.log')
+        else:
+            file_handler = logging.FileHandler(logfilename)
+
+        file_handler.setFormatter(
+            logging.Formatter('%(asctime)s %(name)s %(message)s',
+                              datefmt='%H:%M:%S'))
+        file_handler.level = logging.DEBUG
+
+        self.logger = logging.getLogger(self['param']['loggername'])
+        self.logger.setLevel(logging.DEBUG)
+        self.logger.addHandler(file_handler)
+        self.logger.warning("KnParam initialized :\n" + pprint.pformat(self))
