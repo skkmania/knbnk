@@ -53,15 +53,6 @@ class TestNew:
         h.assert_that(kn.height, h.equal_to(558))
 
 
-class TestTmpDir:
-    def test_write(self, kn, tmpdir):
-        dataDirectory = tmpdir.mkdir('data')
-        sampleFile = str(dataDirectory.join("sample.jpeg"))
-        kn.write(sampleFile)
-        assert 'sample.jpeg' in sampleFile
-        assert sampleFile != '/tmp/pytest-skkmania/data/sample.jpeg'
-
-
 class TestFileName:
     def test_mkFilename(self, kn):
         name = mkFilename(kn, '_cont')
