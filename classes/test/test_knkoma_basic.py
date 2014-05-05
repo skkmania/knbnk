@@ -109,21 +109,18 @@ class TestEstimateLayouts:
         kn = kk.KnKoma(graph2)
         kn.write_binarized_file()
         kn.estimate_layouts()
-        assert type(kn.layouts) is list
-        assert len(kn.layouts) == 2
+        assert kn.numOfPages == 2
 
     def test_estimate_layouts_of_b1g101(self, b1g101):
         b1g101.set_logger("_estimate_layouts_of_b1g101")
         kn = kk.KnKoma(b1g101)
         kn.write_binarized_file()
         kn.estimate_layouts()
-        assert type(kn.layouts) is list
-        assert len(kn.layouts) == 2
+        assert kn.numOfPages == 2
 
     def test_estimate_layouts_of_b1g102(self, b1g102):
         b1g102.set_logger("_estimate_layouts_of_b1g102")
         kn = kk.KnKoma(b1g102)
         kn.write_binarized_file()
         kn.estimate_layouts()
-        assert type(kn.layouts) is list
-        assert len(kn.layouts) == 2
+        assert kn.numOfPages == 2

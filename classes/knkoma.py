@@ -2,7 +2,6 @@
 import logging
 import pprint
 import os
-import sys
 import numpy as np
 import itertools
 
@@ -122,70 +121,47 @@ class KnKoma:
             raise KnKomaException('%s not found' % self.imgfname)
 
     @ku.deblog
-    def changeparam(self, cnt):
-        rho, theta, minimumVote = self.parameters['hough']
-        minimumVote = int(0.9 * minimumVote)
-        self.parameters['hough'] = [rho, theta, minimumVote]
-
-        minval, maxval, apertureSize = self.parameters['canny']
-        maxval = int(0.9 * maxval)
-        self.parameters['canny'] = [minval, maxval, apertureSize]
-        self.logger.debug('hough : %s' % str(self.parameters['hough']))
-        self.logger.debug('canny : %s' % str(self.parameters['canny']))
-
-    @ku.deblog
     def simply_divide_half(self):
+        """
+        画像の内容を考慮せず、外形的サイズのみから縦に半分にする
+        副作用: self.leftPage, self.rightPage の設定
+        """
         self.leftPage = self.img[:, :int(self.width / 2)]
         self.rightPage = self.img[:, int(self.width / 2):]
-        self.write_page_img_to_file()
-
-    @ku.deblog
-    def isCenterAmbiguous(self):
-        return len(self.candidates['left']) > 0 and\
-            len(self.candidates['center']) > 0 and\
-            len(self.candidates['right']) > 0
 
     @ku.deblog
     def estimate_layouts(self):
         """
         komaに何ページあるのか調べる
-        副作用: self.layouts の設定
+        副作用: self.numOfPages の設定
         [str of each page's style]
+
+        調査方法:
+
+            まず外部からページ数などの情報が与えられているかcheck
+            cornerLines を探して５本あれば２ページと判断する
         """
-        self.layouts = ["graph", "graph"]
+        if 'info' in self.p:
+            if 'numOfPages' in self.p['info']:
+                self.numOfPages = self.p['info']['numOfPages']
+
+            self.verify_given_info()
+
+        else:
+            self.make_pages_environment()
+
+    def verify_given_info(self):
+        self.numOfPages = 2
 
     @ku.deblog
-    def adjust_parameters(self):
-        """
-        self.imgを分割しleftPage, rightPageを生成する
-        その過程でparameterを調整する
-        戻り値：なし
-        """
-        self.cornerLines = {}
-        try_count = 0
-        while try_count < 5:
-            self.prepareForLines()
-            self.getHoughLines()
-            if self.lines is None:
-                self.logger.debug(
-                    'lines not found. try count : %d' % try_count)
-                self.changeparam(try_count)
-                try_count += 1
-                continue
-            elif self.enoughLines():
-                self.findCornerLines()
-                if self.isCenterAmbiguous():
-                    self.findCenterLine()
-                # self.verifyCornerLines()
-                break
-            else:
-                self.logger.debug(
-                    'lines not enough. try count : %d' % try_count)
-                self.changeparam(try_count)
-                try_count += 1
-        else:
-            self.logger.debug('KnKoma#divide: retry over 5 times and gave up!')
-            self.complement_corner_lines()
+    def make_pages_environment(self):
+        self.corner_finder = ku.CornerLineFinder(self)
+        self.originalCorner = self.corner_finder.get_original_corner()
+        self.get_page_img()
+        self.mk_page_dirname()
+        self.mk_page_param_dicts()
+        self.mk_page_dir_and_write_img_file()
+        self.numOfPages = 2
 
     @ku.deblog
     def divide(self, param=None):
@@ -222,13 +198,6 @@ class KnKoma:
 
         self.set_original_corner_lines()
         self.get_page_img()
-        self.write_page_img_to_file()
-
-    @ku.deblog
-    def set_original_corner_lines(self):
-        self.originalCorner = {}
-        for d in ['upper', 'lower', 'center', 'right', 'left']:
-            self.originalCorner[d] = int(self.cornerLines[d][0] / self.scale)
 
     @ku.deblog
     def get_page_img(self):
@@ -269,14 +238,6 @@ class KnKoma:
         self.val = v
 
     @ku.deblog
-    def separate(self, arr, x):
-        if x[1] - arr[-1][-1][1] < 15:
-            arr[-1].append(x)
-        else:
-            arr.append([x])
-        return arr
-
-    @ku.deblog
     def getBinarized(self):
         """
         binarize された配列を self.binarized にセットする
@@ -310,63 +271,6 @@ class KnKoma:
                              cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
     @ku.deblog
-    def prepareForLines(self):
-        """
-        縮小画像を作成
-        hough parameters (rho, theta, minimumVote)をいったん確定しておく
-        canny parameters (minval, maxval, apertureSize)をいったん確定しておく
-        """
-        if 'scale_size' in self.parameters:
-            self.scale_size = self.parameters['scale_size']
-            self.scale = self.scale_size / self.width
-        else:
-            raise KnKomaParamsException('scale_size must be in param file')
-
-        if 'hough' in self.parameters:
-            rho, theta, minimumVote = self.parameters['hough']
-            theta = np.pi / theta
-        else:
-            rho, theta, minimumVote = [1, np.pi / 180, 120]
-
-        if 'canny' in self.parameters:
-            minval, maxval, apertureSize = self.parameters['canny']
-        else:
-            minval, maxval, apertureSize = [50, 200, 3]
-
-        self.small_img = cv2.resize(self.img,
-                                    (int(self.width * self.scale),
-                                     int(self.height * self.scale)))
-        self.small_height, self.small_width, self.small_depth =\
-            self.small_img.shape
-        self.small_img_gray = cv2.cvtColor(self.small_img, cv2.COLOR_BGR2GRAY)
-        self.small_img_canny = cv2.Canny(self.small_img_gray,
-                                         minval, maxval, apertureSize)
-        self.rho = rho
-        self.theta = theta
-        self.minimumVote = minimumVote
-
-    @ku.deblog
-    def getHoughLines(self):
-        """
-        small_img_canny からHough lineを算出しておく
-        戻り値: self.lines lineの配列
-            この要素のlineは、(rho, theta). 2次元Hough space上の1点を指す
-            OpenCVの戻り値は[[[0,1],[0,2],...,[]]]と外側に配列があるが、
-            この関数の戻り値はそれをひとつ外して
-            lineの配列としていることに注意。
-            また、後々の処理の便宜のため、numpyのarrayからpythonのlistに変換し、
-            theta, rhoの順に2段のkeyにもとづきsortしておく。
-        """
-        tmplines = cv2.HoughLines(self.small_img_canny,
-                                  self.rho, self.theta,
-                                  self.minimumVote)
-        if tmplines is not None:
-            self.lines = tmplines[0].tolist()
-            self.lines.sort(key=lambda x: (x[1], x[0]))
-        else:
-            self.lines = None
-
-    @ku.deblog
     def getHoughLinesP(self):
         self.linesP = cv2.HoughLinesP(self.small_img_canny,
                                       self.rho, self.theta, self.minimumVote)
@@ -391,37 +295,8 @@ class KnKoma:
             x2 = int(x0 - 1000 * (-b))
             y2 = int(y0 - 1000 * (a))
             self.linePoints.append([(x1, y1), (x2, y2)])
-
-    @ku.deblog
-    def compLine(self, line0, line1, horv):
-        """
-        line0, line1 の形式は2点指定式。[(x0,y0), (x1,y1)]
-        line0, line1 の関係を返す
-        horv :  "h" or "v" を指定
-        """
-        if horv == 'h':
-            if self.isHorizontal(line0) and self.isHorizontal(line1):
-                if max(line0[0][1], line0[1][1]) >\
-                        max(line1[0][1], line1[1][1]):
-                    return "upper"
-                else:
-                    return "lower"
-            else:
-                raise KnKomaException('wrong recognition of line')
-        else:
-            if self.isVertical(line0) and self.isVertical(line1):
-                if max(line0[0][0], line0[1][0]) >\
-                        max(line1[0][0], line1[1][0]):
-                    return "right"
-                else:
-                    return "left"
-            else:
-                raise KnKomaException('wrong recognition of line')
-
-    @ku.deblog
-    def partitionLines(self):
-        self.horizLines = filter(self.isHorizontal, self.lines)
-        self.vertLines = filter(self.isVertical, self.lines)
+        self.logger.debug('linePoints: # : %d' % len(self.linePoints))
+        self.logger.debug('linePoints: %s' % str(self.linePoints))
 
     @ku.deblog
     def makeCandidates(self, umpire=None):
@@ -438,164 +313,6 @@ class KnKoma:
                     if self.small_zone[direction][0] < line[0] <\
                             self.small_zone[direction][1]:
                         self.candidates[direction].append(line)
-
-    @ku.deblog
-    def lineSeemsToExist(self, direction, umpire=None):
-        if umpire is not None:
-            pass
-        else:
-            if direction in ['upper', 'lower']:
-                for line in self.horizLines:
-                    if self.small_zone[direction][0] < line[0] <\
-                            self.small_zone[direction][1]:
-                        self.candidates[direction].append(line)
-            else:
-                for line in self.vertLines:
-                    if self.small_zone[direction][0] < line[0] <\
-                            self.small_zone[direction][1]:
-                        self.candidates[direction].append(line)
-        self.logger.debug('direction : %s' % direction)
-        self.logger.debug('candidates: %s' % str(self.candidates[direction]))
-        return len(self.candidates[direction]) > 0
-
-    @ku.deblog
-    def makeSmallZone(self, levels=None):
-        """
-        cornerLinesは経験上画像の4辺から、この程度離れたところに存在している
-        はずだという数値
-        HoughLinesを取得したあと、cornerLinesを絞りこむために利用する。
-        """
-        if levels is None:
-            levels = {'upper':  [0.03, 0.1],
-                      'lower':  [0.9, 0.97],
-                      'center': [0.45, 0.55],
-                      'left':   [0.03, 0.1],
-                      'right':  [0.9, 0.97]}
-        self.small_zone = {}
-        for d in ['upper', 'lower']:
-            self.small_zone[d] = [self.small_height * x for x in levels[d]]
-        for d in ['center', 'left', 'right']:
-            self.small_zone[d] = [self.small_width * x for x in levels[d]]
-
-    @ku.deblog
-    def enoughLines(self):
-        komanumstr = self.p['koma']['komaIdStr']
-        self.logger.info('# of self.lines in %s : %s' %
-                         (komanumstr, len(self.lines)))
-        if len(self.lines) < 5:
-            self.logger.debug('self.lines : %s' % str(self.lines))
-            self.logger.debug('enoughLines returns *False*' +
-                              ' because this poor Lines')
-            return False
-        else:
-            self.partitionLines()
-            if len(self.horizLines) < 2 or len(self.vertLines) < 3:
-                self.logger.debug(
-                    'self.horizLines : %s' % str(self.horizLines))
-                self.logger.debug('self.vertLines : %s' % str(self.vertLines))
-                self.logger.debug('enoughLines returns *False*' +
-                                  ' because this poor (horiz|vert)Lines')
-                return False
-            else:
-                self.makeSmallZone()
-                # self.makeCandidates()  # for debug
-                for d in ['upper', 'lower', 'center', 'right', 'left']:
-                    if not self.lineSeemsToExist(d):
-                        self.logger.debug('enoughLines returns *False*' +
-                                          ' because %s has 0 candidates' % d)
-                        return False
-        return True
-
-    @ku.deblog
-    def selectLine(self, way, lines):
-        if way == 'center':
-            lines.sort(key=lambda x: abs((self.small_width / 2) - x[0]))
-            return lines[0]
-        else:
-            lines.sort(key=lambda x: x[0])
-            if way == 'min':
-                return lines[0]
-            elif way == 'max':
-                return lines[-1]
-
-    @ku.deblog
-    def findCenterLine(self):
-        self.logger.debug('cornerLine: %s' % (str(self.cornerLines)))
-        self.logger.debug('candidate: %s' % (str(self.candidates)))
-        diffOfPageWidth = lambda (left, center, right):\
-            abs((right[0] - center[0]) - (center[0] - left[0]))
-        tuplesOfVertLines =\
-            sorted(itertools.product(self.candidates['left'],
-                                     self.candidates['center'],
-                                     self.candidates['right']),
-                   key=diffOfPageWidth)
-        self.cornerLines['center'] = tuplesOfVertLines[0][1]
-        self.logger.debug('just before exitting findCenterLine:')
-        self.logger.debug('cornerLine: %s' % (str(self.cornerLines)))
-
-    @ku.deblog
-    def findCornerLines(self):
-        self.logger.debug('cornerLine: %s' % (str(self.cornerLines)))
-        for (d, w) in [('upper', 'min'), ('lower', 'max'),
-                       ('left', 'min'), ('right', 'max')]:
-            lines = self.candidates[d]
-            if len(lines) == 0:
-                pass
-            elif len(lines) == 1:
-                self.cornerLines[d] = lines[0]
-            else:
-                self.cornerLines[d] = self.selectLine(w, lines)
-        self.logger.debug('just before exitting findCornerLines:')
-        self.logger.debug('cornerLine: %s' % (str(self.cornerLines)))
-
-    @ku.deblog
-    def complement_corner_lines(self):
-        half_pi = 1.5707963705062866
-        self.logger.debug('cornerLine: %s' % (str(self.cornerLines)))
-        self.findCornerLines()
-        for d in ['upper', 'lower', 'left', 'right']:
-            if (not (d in self.candidates)) or (len(self.candidates[d]) == 0):
-                if d == 'upper':
-                    self.cornerLines[d] = [
-                        int(self.small_height * 0.15), half_pi]
-                elif d == 'lower':
-                    self.cornerLines[d] = [
-                        int(self.small_height * 0.9), half_pi]
-                elif d == 'left':
-                    self.cornerLines[d] = [int(self.small_width * 0.1), 0]
-                elif d == 'right':
-                    self.cornerLines[d] = [int(self.small_width * 0.9), 0]
-        self.cornerLines['center'] = [int(self.small_width * 0.5), 0]
-        self.logger.debug('just before exitting complement_corner_lines:')
-        self.logger.debug('cornerLine: %s' % (str(self.cornerLines)))
-        self.complemented = True
-
-    @ku.deblog
-    def findCornerLineP(self):
-        a = self.linePoints
-        vlines = [vline for vline in a if abs(vline[0][0] - vline[1][0]) < 50]
-        hlines = [hline for hline in a if abs(hline[0][1] - hline[1][1]) < 50]
-        upper_hline = hlines[0]
-        lower_hline = hlines[0]
-        for line in hlines:
-            if self.compLine(line, upper_hline, 'h') == "upper":
-                upper_hline = line
-
-            if self.compLine(line, lower_hline, 'h') == "lower":
-                lower_hline = line
-
-        right_vline = vlines[0]
-        left_vline = vlines[0]
-        for line in vlines:
-            if self.compLine(line, right_vline, 'v') == "right":
-                right_vline = line
-
-            if self.compLine(line, left_vline, 'v') == "left":
-                left_vline = line
-
-    @ku.deblog
-    def findCenterLineP(self):
-        pass
 
     @ku.deblog
     def write_lines_to_file(self, outdir):
@@ -733,82 +450,3 @@ class KnKoma:
         d1, d2, x2, y2 = map(max, zip(*target))
         # (x,y,x+w,y+h) -> (x,y,x,y)
         return (x1, y1, x2 - x1, y2 - y1)
-
-    def isVertical(self, line):
-        """
-         line = [[x1, y1],[x2, y2]]
-         line = (rho, theta)
-         を判別して対応
-        """
-        if isinstance(line[0], list) or isinstance(line[0], tuple):
-            return (line[0][0] == line[1][0])
-        else:
-            return line[1] < 0.01
-
-    def isHorizontal(self, line):
-        """
-         line = [[x1, y1],[x2, y2]]
-         line = (rho, theta)
-         を判別して対応
-        """
-        if isinstance(line[0], list) or isinstance(line[0], tuple):
-            return (line[0][1] == line[1][1])
-        else:
-            return abs(line[1] - np.pi / 2) < 0.01
-
-    @ku.deblog
-    def getIntersection(self, line1, line2):
-        """
-         Finds the intersection of two lines, or returns false.
-         line1 = [[x1, y1],[x2, y2]]
-         line2 = [[x1, y1],[x2, y2]]
-        """
-        s1 = np.array([float(x) for x in line1[0]])
-        e1 = np.array([float(x) for x in line1[1]])
-
-        s2 = np.array([float(x) for x in line2[0]])
-        e2 = np.array([float(x) for x in line2[1]])
-
-        if self.isVertical(line1):
-            if self.isVertical(line2):
-                return False
-            else:
-                a2 = (s2[1] - e2[1]) / (s2[0] - e2[0])
-                b2 = s2[1] - (a2 * s2[0])
-                x = line1[0][0]
-                y = a2 * x + b2
-
-        elif self.isVertical(line2):
-            a1 = (s1[1] - e1[1]) / (s1[0] - e1[0])
-            b1 = s1[1] - (a1 * s1[0])
-            x = line2[0][0]
-            y = a1 * x + b1
-
-        elif self.isHorizontal(line1):
-            if self.isHorizontal(line2):
-                return False
-            else:
-                a2 = (s2[1] - e2[1]) / (s2[0] - e2[0])
-                b2 = s2[1] - (a2 * s2[0])
-                y = line1[0][1]
-                x = (y - b2) / a2
-
-        elif self.isHorizontal(line2):
-            a1 = (s1[1] - e1[1]) / (s1[0] - e1[0])
-            b1 = s1[1] - (a1 * s1[0])
-            y = line1[1][1]
-            x = (y - b1) / a1
-
-        else:
-            a1 = (s1[1] - e1[1]) / (s1[0] - e1[0])
-            b1 = s1[1] - (a1 * s1[0])
-            a2 = (s2[1] - e2[1]) / (s2[0] - e2[0])
-            b2 = s2[1] - (a2 * s2[0])
-
-            if abs(a1 - a2) < sys.float_info.epsilon:
-                return False
-
-            x = (b2 - b1) / (a1 - a2)
-            y = a1 * x + b1
-
-        return (int(round(x)), int(round(y)))

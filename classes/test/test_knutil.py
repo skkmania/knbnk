@@ -31,3 +31,26 @@ class TestTmpDir:
         ku.write(sampleFile)
         assert 'sample.jpeg' in sampleFile
         assert sampleFile != '/tmp/pytest-skkmania/data/sample.jpeg'
+
+
+class TestParamsGenerator:
+    def test_params_generator(self, tmpdir):
+        SRC_SAMPLE = {
+            "scale_size": [640.0, 480.0, 320.0],
+            "boundingRect": [[16, 32]],
+            "imgfname": [DATA_DIR + '/007.jpeg', DATA_DIR + '/008.jpeg'],
+            "mode": ["EXTERNAL"],
+            "canny": [[50, 200, 3]],
+            "hough": [[1, 180, 200]],
+            "method": ["NONE"],
+            "outdir": [DATA_DIR]
+        }
+        src = SRC_SAMPLE
+        result = ku.params_generator(src)
+        wrap = lambda d: d.get("scale_size")
+        assert set(map(wrap, result)) == set(src["scale_size"])
+        dataDirectory = tmpdir.mkdir('data')
+        sampleFile = dataDirectory.join("result.txt")
+        with open(str(sampleFile), 'w') as f:
+            f.write(str(result))
+        ku.print_params_files(result)

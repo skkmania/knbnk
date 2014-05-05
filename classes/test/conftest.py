@@ -99,6 +99,76 @@ def pytest_funcarg__kn005(request):
     return KnParam(param_dict)
 
 
+def pytest_funcarg__knManyLines(request):
+    param_dict = copy.deepcopy(Default_Param)
+    spec = {
+        "param": {
+            "logfilename": "knM007",
+            "arcdir":      DATA_DIR,
+            "outdir":      "/".join([DATA_DIR, "1142178"]),
+            "workdir":     DATA_DIR,
+            "paramfdir":   "1142178",
+            "paramfname":  "knMany007.json",
+            "balls":       ["1142178"]
+        },
+        "book": {
+            "bookdir":      "1142178",
+            "bookId":       "1142178"
+        },
+        "koma": {
+            "scale_size":   320.0,
+            "hough": [1, 2, 80],
+            "canny": [50, 150, 3],
+            "komadir":      'k007',
+            "komaId":       7,
+            "komaIdStr":    "007",
+            "imgfname":     "007.jpeg"
+        },
+        "page": {
+            "imgfname":     "007_0.jpeg"
+        }
+    }
+    for k, v in param_dict.items():
+        v.update(spec[k])
+    ku.check_test_environment(param_dict, '1142178')
+    return KnParam(param_dict)
+
+
+def pytest_funcarg__knFewLines(request):
+    param_dict = copy.deepcopy(Default_Param)
+    spec = {
+        "param": {
+            "logfilename": "knF006",
+            "arcdir":      DATA_DIR,
+            "outdir":      "/".join([DATA_DIR, "1123003"]),
+            "workdir":     DATA_DIR,
+            "paramfdir":   "1123003",
+            "paramfname":  "knMany006.json",
+            "balls":       ["1123003"]
+        },
+        "book": {
+            "bookdir":      "1123003",
+            "bookId":       "1123003"
+        },
+        "koma": {
+            "scale_size":   320.0,
+            "hough": [1, 180, 200],
+            "canny": [50, 150, 3],
+            "komadir":      'k006',
+            "komaId":       7,
+            "komaIdStr":    "006",
+            "imgfname":     "006.jpeg"
+        },
+        "page": {
+            "imgfname":     "006_0.jpeg"
+        }
+    }
+    for k, v in param_dict.items():
+        v.update(spec[k])
+    ku.check_test_environment(param_dict, '1123003')
+    return KnParam(param_dict)
+
+
 def pytest_funcarg__graph2(request):
     """
     両側とも全面挿絵のサンプル
