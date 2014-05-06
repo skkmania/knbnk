@@ -2,6 +2,7 @@
 import pytest
 #import dircache
 import json
+import os.path
 import shutil
 import classes.knkoma as kk
 import classes.knutil as ku
@@ -103,182 +104,112 @@ def edit_parms_file(pfbody=None, imfname=None, opts=None, data_dir=None):
         json.dump(params, f, sort_keys=False, indent=4)
 
 
-class TestGetHoughLinesP:
-    def test_getHoughLinesP(self):
-        bookId = '1123003'
-        data_dir = DATA_DIR + '/' + bookId
-        params = {
-            "komanumstr": "007",
-            "scale_size": 640.0,
-            "boundingRect": [16, 32],
-            "imgfname": data_dir + '/007.jpeg',
-            "outfilename": "hough_1_2_100_007",
-            "mode": "EXTERNAL",
-            "canny": [50, 200, 3],
-            "hough": [1, 2, 100],
-            "paramfname": data_dir + '/hough_1_2_100.json',
-            "method": "NONE",
-            "outdir": data_dir
-        }
-        ku.check_test_environment(params, bookId)
-        kns = kk.KnKoma(params=params['paramfname'])
-        kns.prepareForLines()
-        kns.getHoughLinesP()
-        kns.write_linesP_to_file(data_dir)
-
-
-class TestGetHoughLines:
-    def pytest_funcarg__kns(self, request):
-        bookId = '1123003'
-        self.data_dir = DATA_DIR + '/' + bookId
-        params = {
-            "scale_size": 640.0,
-            "komanumstr": "007",
-            "boundingRect": [16, 32],
-            "imgfname": self.data_dir + '/007.jpeg',
-            "outfilename": "hough_1_2_100_007",
-            "mode": "EXTERNAL",
-            "canny": [50, 200, 3],
-            "hough": [1, 2, 100],
-            "paramfname": self.data_dir + '/hough_1_2_100.json',
-            "method": "NONE",
-            "outdir": self.data_dir
-        }
-        ku.check_test_environment(params, bookId)
-        return kk.KnKoma(params=params['paramfname'])
-
-    def test_prepareForLines(self, kns):
-        kns.prepareForLines()
-
-    def test_getHoughLines(self, kns):
-        kns.prepareForLines()
-        kns.getHoughLines()
-
-    def test_write_lines_to_file(self, kns):
-        kns.prepareForLines()
-        kns.getHoughLines()
-        kns.write_lines_to_file(self.data_dir)
-        assert len(kns.lines) > 0
+class TestEnoughLines:
+    """
+    線分が多い画像のとき、enoughLinesがTrueを返すことを確認
+    (もっとも、これでもsmall_zone_levelsをいじったうえで実現しているのだが）
+    画像も出力しているので目視確認せよ。
+    """
+    def test_enoughLines(self, knManyLines):
+        knManyLines.set_logger("_enoughLines_M")
+        k007 = kk.KnKoma(knManyLines)
+        cf = ku.ImageManager(k007)
+        cf.prepareForLines()
+        cf.getHoughLines()
+        cf.get_small_img_with_lines()
+        cf.write_small_img_with_lines()
+        result = cf.enoughLines()
+        assert result is True
 
 
 class TestEnoughLinesFailure:
-    def pytest_funcarg__kns(self, request):
-        bookId = '1091460'
-        self.data_dir = DATA_DIR + '/' + bookId
-        params = {
-            "scale_size": 640.0,
-            "komanumstr": "007",
-            "boundingRect": [16, 32],
-            "imgfname": self.data_dir + '/001.jpeg',
-            "outfilename": "hough_1_2_100_001",
-            "mode": "EXTERNAL",
-            "canny": [50, 150, 3],
-            "hough": [1, 2, 50],
-            "paramfname": self.data_dir + '/hough_1_2_100.json',
-            "method": "NONE",
-            "outdir": self.data_dir
-        }
-        ku.check_test_environment(params, bookId)
-        return kk.KnKoma(params=params['paramfname'])
-
-    def test_prepareForLines(self, kns):
-        kns.prepareForLines()
-
-    def test_getHoughLines(self, kns):
-        kns.prepareForLines()
-        kns.getHoughLines()
-        assert kns.enoughLines() is False
+    """
+    線分が少ない画像のとき、enoughLinesがFalseを返すことを確認
+    画像も出力しているので目視確認せよ。
+    """
+    def test_enoughLines_Failure(self, knp):
+        knp.set_logger("_hlfail")
+        k001 = kk.KnKoma(knp)
+        cf = ku.ImageManager(k001)
+        cf.prepareForLines()
+        cf.getHoughLines()
+        cf.get_small_img_with_lines()
+        cf.write_small_img_with_lines()
+        assert cf.enoughLines() is False
 
 
 class TestDivide:
     def test_divide(self, knManyLines):
         knManyLines.set_logger("_divide_M")
         k007 = kk.KnKoma(knManyLines)
+        cf = ku.ImageManager(k007)
         k007.divide()
         assert k007.leftPage is not None
         assert k007.rightPage is not None
 
 
-class TestDivideFailure:
-    def test_divide(self, knFewLines):
-        knFewLines.set_logger("_divide_F")
-        k007 = kk.KnKoma(knFewLines)
-        k007.divide()
-        assert k007.leftPage is not None
-        assert k007.rightPage is not None
-
-
-class TestEnoughLines:
-    def test_enoughLines(self, knManyLines):
-        knManyLines.set_logger("_enoughLines_M")
+class TestMakePagesEnvironments:
+    def test_make_pages_environment(self, knManyLines):
+        knManyLines.set_logger("_mk_penv")
         k007 = kk.KnKoma(knManyLines)
-        k007.prepareForLines()
-        k007.getHoughLines()
-        result = k007.enoughLines()
-        assert result is False
-
-    def test_enoughLines2(self, knFewLines):
-        knFewLines.set_logger("_enoughLines_F")
-        k007 = kk.KnKoma(knFewLines)
-        k007.prepareForLines()
-        k007.getHoughLines()
-        result = k007.enoughLines()
-        assert result is False
+        cf = ku.ImageManager(k007)
+        k007.make_pages_environment()
+        assert os.path.exists(k007.right_page_fname)
+        assert os.path.exists(k007.left_page_fname )
 
 
 class TestFindCornerLines:
     def test_findCornerLines(self, knManyLines):
         knManyLines.set_logger("_findCornerLines_M")
         k007 = kk.KnKoma(knManyLines)
-        cf = ku.CornerLineFinder(k007)
+        cf = ku.ImageManager(k007)
         cf.prepareForLines()
         cf.getHoughLines()
         cf.enoughLines()
         cf.get_corner_lines()
         assert len(cf.cornerLines) == 5
         if cf.isCenterAmbiguous():
-            cf.findCenterk007Line()
-            print str(cf.cornerLines)
+            cf.findCenterLine()
+            k007.logger.debug(str(cf.cornerLines))
             assert len(cf.cornerLines) == 5
 
 
 class TestWriteSmallImage:
-    def test_write_small_img(self, knFewLines):
-        knFewLines.set_logger("_wsmi")
-        k006 = kk.KnKoma(knFewLines)
-        k006.prepareForLines()
-        k006.write_small_img()
-        assert k006.small_img is not None
-
     def test_write_small_img_with_lines_F(self, knFewLines):
         knFewLines.set_logger("_wswlF")
         k006 = kk.KnKoma(knFewLines)
-        k006.prepareForLines()
-        k006.getHoughLines()
-        k006.get_small_img_with_lines()
-        k006.write_small_img_with_lines()
-        assert k006.small_img is not None
+        cf = ku.ImageManager(k006)
+        cf.prepareForLines()
+        cf.getHoughLines()
+        cf.get_small_img_with_lines()
+        cf.write_small_img()
+        cf.write_small_img_with_lines()
+        assert cf.small_img is not None
 
     def test_write_small_img_with_lines_M(self, knManyLines):
         knManyLines.set_logger("_wswlM")
         k006 = kk.KnKoma(knManyLines)
-        k006.prepareForLines()
-        k006.getHoughLines()
-        k006.get_small_img_with_lines()
-        k006.write_small_img_with_lines()
-        assert k006.small_img is not None
+        cf = ku.ImageManager(k006)
+        cf.prepareForLines()
+        cf.getHoughLines()
+        cf.write_small_img()
+        cf.get_small_img_with_lines()
+        cf.write_small_img_with_lines()
+        assert cf.small_img is not None
 
 
 class TestSmallImageP:
     def test_get_small_img_with_linesP(self, knManyLines):
         knManyLines.set_logger("_gslP")
         k006 = kk.KnKoma(knManyLines)
-        k006.prepareForLines()
-        k006.getHoughLinesP()
-        k006.get_small_img_with_linesP()
-        k006.write_small_img_with_linesP()
-        assert k006.small_img_with_linesP is not None
-
+        im = ku.ImageManager(k006)
+        im.prepareForLines()
+        im.getHoughLinesP()
+        im.get_small_img_with_linesP()
+        im.write_small_img_with_linesP()
+        im.write_linesP_to_file()
+        im.write_lines_to_file()
+        assert im.small_img_with_linesP is not None
 
 class TestGetHoughLinesWithManyPatterns:
     @pytest.mark.parametrize("pfbody,imfname", [

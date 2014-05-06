@@ -3,12 +3,8 @@ import logging
 import pprint
 import os
 import numpy as np
-import itertools
-
 import cv2
-#import json
 import os.path
-#from operator import itemgetter, attrgetter
 import knparam as kr
 import knpage as kp
 import knutil as ku
@@ -70,8 +66,8 @@ class KnKoma:
             else:
                 self.imgfname = "/".join([self.komadir,
                                           self.p['koma']['imgfname']])
-            self.complemented = False
             self.get_img()
+            self.im = ku.ImageManager(self)
 
     def __exit__(self, type, value, traceback):
         self.logger.debug('exit')
@@ -79,7 +75,6 @@ class KnKoma:
     @ku.deblog
     def start(self):
         self.adjust_parameters()
-        self.set_original_corner_lines()
         self.get_page_img()
         self.mk_page_dirname()
         self.mk_page_param_dicts()
@@ -99,7 +94,8 @@ class KnKoma:
                 "lr": "left",
                 "pagedir": self.pagedirname['left'],
                 "imgfname": self.p['koma']['komaIdStr'] + '_1.jpeg'}]
-        self.logger.debug('mk_page_param_dict returns : %s' % str(ret))
+        self.logger.debug('mk_page_param_dict returns : %s' %
+                          pprint.pformat(ret))
         self.page_param_dicts = ret
         return ret
 
@@ -155,49 +151,22 @@ class KnKoma:
 
     @ku.deblog
     def make_pages_environment(self):
-        self.corner_finder = ku.CornerLineFinder(self)
-        self.originalCorner = self.corner_finder.get_original_corner()
-        self.get_page_img()
+        self.divide()
         self.mk_page_dirname()
         self.mk_page_param_dicts()
         self.mk_page_dir_and_write_img_file()
-        self.numOfPages = 2
 
     @ku.deblog
-    def divide(self, param=None):
+    def divide(self):
         """
         self.imgを分割しleftPage, rightPageを生成する
         入力値: string : KnPage生成に必要なparameter file name
         戻り値: なし
         """
-        self.cornerLines = {}
-        try_count = 0
-        while try_count < 5:
-            self.prepareForLines()
-            self.getHoughLines()
-            if self.lines is None:
-                self.logger.debug(
-                    'lines not found. try count : %d' % try_count)
-                self.changeparam(try_count)
-                try_count += 1
-                continue
-            elif self.enoughLines():
-                self.findCornerLines()
-                if self.isCenterAmbiguous():
-                    self.findCenterLine()
-                # self.verifyCornerLines()
-                break
-            else:
-                self.logger.debug(
-                    'lines not enough. try count : %d' % try_count)
-                self.changeparam(try_count)
-                try_count += 1
-        else:
-            self.logger.debug('KnKoma#divide: retry over 5 times and gave up!')
-            self.complement_corner_lines()
-
-        self.set_original_corner_lines()
+        self.cornerLines = self.im.get_corner_lines()
+        self.originalCorner = self.im.get_original_corner()
         self.get_page_img()
+        self.numOfPages = 2
 
     @ku.deblog
     def get_page_img(self):
@@ -210,7 +179,7 @@ class KnKoma:
     @ku.deblog
     def mk_page_dirname(self):
         self.pagedirname = {}
-        if self.complemented:
+        if self.im.complemented:
             self.pagedirname = {}
             self.pagedirname['right'] = '/complemented/right'
             self.pagedirname['left'] = '/complemented/left'
@@ -226,13 +195,14 @@ class KnKoma:
         pagedir = '%s/%s' % (self.komadir, self.page_param_dicts[0]['pagedir'])
         if not os.path.exists(pagedir):
             os.makedirs(pagedir)
-        cv2.imwrite(self.page_param_dicts[0]['imgfname'],
-                    self.rightPage)
+        self.right_page_fname = '/'.join([pagedir, self.page_param_dicts[0]['imgfname']])
+        cv2.imwrite(self.right_page_fname, self.rightPage)
+
         pagedir = '%s/%s' % (self.komadir, self.page_param_dicts[1]['pagedir'])
         if not os.path.exists(pagedir):
             os.makedirs(pagedir)
-        cv2.imwrite(self.page_param_dicts[1]['imgfname'],
-                    self.leftPage)
+        self.left_page_fname = '/'.join([pagedir, self.page_param_dicts[1]['imgfname']])
+        cv2.imwrite(self.left_page_fname, self.leftPage)
 
     def update(self, v):
         self.val = v
@@ -270,33 +240,6 @@ class KnKoma:
             cv2.findContours(self.binarized,
                              cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
-    @ku.deblog
-    def getHoughLinesP(self):
-        self.linesP = cv2.HoughLinesP(self.small_img_canny,
-                                      self.rho, self.theta, self.minimumVote)
-
-    @ku.deblog
-    def getLinePoints(self):
-        """
-        HoughLinesで取得するlines は
-            [[rho, theta],...]
-        と表現される。 それを
-            [[(x1,y1), (x2,y2)],...]
-        に変換する
-        """
-        self.linePoints = []
-        for rho, theta in self.lines:
-            a = np.cos(theta)
-            b = np.sin(theta)
-            x0 = a * rho
-            y0 = b * rho
-            x1 = int(x0 + 1000 * (-b))
-            y1 = int(y0 + 1000 * (a))
-            x2 = int(x0 - 1000 * (-b))
-            y2 = int(y0 - 1000 * (a))
-            self.linePoints.append([(x1, y1), (x2, y2)])
-        self.logger.debug('linePoints: # : %d' % len(self.linePoints))
-        self.logger.debug('linePoints: %s' % str(self.linePoints))
 
     @ku.deblog
     def makeCandidates(self, umpire=None):
@@ -315,88 +258,11 @@ class KnKoma:
                         self.candidates[direction].append(line)
 
     @ku.deblog
-    def write_lines_to_file(self, outdir):
-        if not hasattr(self, 'lines'):
-            self.getHoughLines()
-            if self.lines is None:
-                return False
-        if not hasattr(self, 'linePoints'):
-            self.getLinePoints()
-        outfilename = ku.mkFilename(self, '_lines_data', outdir, ext='.txt')
-        with open(outfilename, 'w') as f:
-            f.write("stat\n")
-            f.write("len of lines : " + str(len(self.lines)) + "\n")
-            f.write("lines\n")
-            f.write("[rho,  theta]\n")
-            for line in self.lines:
-                f.writelines(str(line))
-                f.write("\n")
-            f.write("\nlen of linePoints : "
-                    + str(len(self.linePoints)) + "\n")
-            f.write("linePoints\n")
-            f.write("[(x1,y1), (x2,y2)]\n")
-            for line in self.linePoints:
-                f.writelines(str(line))
-                f.write("\n")
-
-    @ku.deblog
-    def write_linesP_to_file(self, outdir):
-        if not hasattr(self, 'linesP'):
-            self.getHoughLinesP()
-        outfilename = ku.mkFilename(self, '_linesP_data', outdir, ext='.txt')
-        with open(outfilename, 'w') as f:
-            f.write("stat\n")
-            f.write("linesP\n")
-            f.write("len of linesP[0] : " + str(len(self.linesP[0])) + "\n")
-            f.write("\nlen of linesP: "
-                    + str(len(self.linesP)) + "\n")
-            f.write("[x1,y1,x2,y2]\n")
-            for line in self.linesP:
-                f.writelines(str(line))
-                f.write("\n")
-
-    @ku.deblog
     def writeContour(self):
         self.img_of_contours = np.zeros(self.img.shape, np.uint8)
         for point in self.contours:
             x, y = point[0][0]
             cv2.circle(self.img_of_contours, (x, y), 1, [0, 0, 255])
-
-    @ku.deblog
-    def get_small_img_with_lines(self):
-        self.small_img_with_lines = self.small_img.copy()
-        self.getLinePoints()
-        for line in self.linePoints:
-            cv2.line(self.small_img_with_lines,
-                     line[0], line[1], (0, 0, 255), 2)
-
-    @ku.deblog
-    def get_small_img_with_linesP(self):
-        self.small_img_with_linesP = self.small_img.copy()
-        for line in self.linesP[0]:
-            pt1 = tuple(line[:2])
-            pt2 = tuple(line[-2:])
-            cv2.line(self.small_img_with_linesP,
-                     pt1, pt2, (0, 0, 255), 2)
-
-    @ku.deblog
-    def write_small_img(self, outdir=None):
-        outfilename = ku.mkFilename(self, '_small_img', outdir)
-        cv2.imwrite(outfilename, self.small_img)
-        outfilename = ku.mkFilename(self, '_small_img_gray', outdir)
-        cv2.imwrite(outfilename, self.small_img_gray)
-        outfilename = ku.mkFilename(self, '_small_img_canny', outdir)
-        cv2.imwrite(outfilename, self.small_img_canny)
-
-    @ku.deblog
-    def write_small_img_with_lines(self, outdir=None):
-        outfilename = ku.mkFilename(self, '_small_img_with_lines', outdir)
-        cv2.imwrite(outfilename, self.small_img_with_lines)
-
-    @ku.deblog
-    def write_small_img_with_linesP(self, outdir=None):
-        outfilename = ku.mkFilename(self, '_small_img_with_linesP', outdir)
-        cv2.imwrite(outfilename, self.small_img_with_linesP)
 
     @ku.deblog
     def write_data_file(self, outdir=None):

@@ -122,7 +122,13 @@ def pytest_funcarg__knManyLines(request):
             "komadir":      'k007',
             "komaId":       7,
             "komaIdStr":    "007",
-            "imgfname":     "007.jpeg"
+            "imgfname":     "007.jpeg",
+            "small_zone_levels":
+                         {'upper':  [0.03, 0.1],
+                          'lower':  [0.9, 0.97],
+                          'center': [0.45, 0.55],
+                          'left':   [0.03, 0.12],
+                          'right':  [0.88, 0.97]}
         },
         "page": {
             "imgfname":     "007_0.jpeg"

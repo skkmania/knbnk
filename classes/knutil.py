@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import json
+import os
 import os.path
 import numpy as np
 import itertools
@@ -297,7 +298,7 @@ def params_generator(source):
     return temp
 
 
-class CornerLineFinder:
+class ImageManager:
     """
     入力: obj : KnKoma, KnPageなど、obj.img というpropertyを持つもの
     戻り値: dict : obj.img から求めたcornerLine
@@ -314,6 +315,7 @@ class CornerLineFinder:
             self.logger = obj.logger
             self.p = obj.p
             self.parameters = obj.parameters
+            self.complemented = False
             self.get_corner_lines()
 
     @deblog
@@ -355,6 +357,7 @@ class CornerLineFinder:
         else:
             self.logger.debug('KnKoma#divide: retry over 5 times and gave up!')
             self.complement_corner_lines()
+        return self.cornerLines
 
     @deblog
     def prepareForLines(self):
@@ -649,4 +652,118 @@ class CornerLineFinder:
         self.logger.debug('cornerLine: %s' % (str(self.cornerLines)))
         self.complemented = True
 
+    @deblog
+    def getHoughLinesP(self):
+        self.linesP = cv2.HoughLinesP(self.small_img_canny,
+                                      self.rho, self.theta, self.minimumVote)
+
+    @deblog
+    def get_small_img_with_lines(self):
+        self.small_img_with_lines = self.small_img.copy()
+        self.getLinePoints()
+        for line in self.linePoints:
+            cv2.line(self.small_img_with_lines,
+                     line[0], line[1], (0, 0, 255), 2)
+
+    @deblog
+    def get_small_img_with_linesP(self):
+        self.small_img_with_linesP = self.small_img.copy()
+        for line in self.linesP[0]:
+            pt1 = tuple(line[:2])
+            pt2 = tuple(line[-2:])
+            cv2.line(self.small_img_with_linesP,
+                     pt1, pt2, (0, 0, 255), 2)
+
+    @deblog
+    def write_small_img(self, outdir=None):
+        if outdir is None:
+            outdir = '%s/ss_%d' % (self.tgtObj.komadir,
+                                int(self.parameters['scale_size']))
+        if not os.path.exists(outdir):
+            os.makedirs(outdir)
+        outfilename = mkFilename(self.tgtObj, '_small_img', outdir)
+        cv2.imwrite(outfilename, self.small_img)
+        outfilename = mkFilename(self.tgtObj, '_small_img_gray', outdir)
+        cv2.imwrite(outfilename, self.small_img_gray)
+        outfilename = mkFilename(self.tgtObj, '_small_img_canny', outdir)
+        cv2.imwrite(outfilename, self.small_img_canny)
+
+    @deblog
+    def write_small_img_with_lines(self, outdir=None):
+        if outdir is None:
+            outdir = '%s/ss_%d' % (self.tgtObj.komadir,
+                                int(self.parameters['scale_size']))
+        if not os.path.exists(outdir):
+            os.makedirs(outdir)
+        outfilename = mkFilename(self.tgtObj, '_small_img_with_lines', outdir)
+        cv2.imwrite(outfilename, self.small_img_with_lines)
+
+    @deblog
+    def write_small_img_with_linesP(self, outdir=None):
+        outfilename = mkFilename(self.tgtObj, '_small_img_with_linesP', outdir)
+        cv2.imwrite(outfilename, self.small_img_with_linesP)
+
+    @deblog
+    def write_linesP_to_file(self, outdir=None):
+        if not hasattr(self, 'linesP'):
+            self.getHoughLinesP()
+        outfilename = mkFilename(self.tgtObj, '_linesP_data', outdir, ext='.txt')
+        with open(outfilename, 'w') as f:
+            f.write("stat\n")
+            f.write("linesP\n")
+            f.write("len of linesP[0] : " + str(len(self.linesP[0])) + "\n")
+            f.write("\nlen of linesP: "
+                    + str(len(self.linesP)) + "\n")
+            f.write("[x1,y1,x2,y2]\n")
+            for line in self.linesP:
+                f.writelines(str(line))
+                f.write("\n")
+
+    @deblog
+    def write_lines_to_file(self, outdir=None):
+        if not hasattr(self, 'lines'):
+            self.getHoughLines()
+            if self.lines is None:
+                return False
+        if not hasattr(self, 'linePoints'):
+            self.getLinePoints()
+        outfilename = mkFilename(self.tgtObj, '_lines_data', outdir, ext='.txt')
+        with open(outfilename, 'w') as f:
+            f.write("stat\n")
+            f.write("len of lines : " + str(len(self.lines)) + "\n")
+            f.write("lines\n")
+            f.write("[rho,  theta]\n")
+            for line in self.lines:
+                f.writelines(str(line))
+                f.write("\n")
+            f.write("\nlen of linePoints : "
+                    + str(len(self.linePoints)) + "\n")
+            f.write("linePoints\n")
+            f.write("[(x1,y1), (x2,y2)]\n")
+            for line in self.linePoints:
+                f.writelines(str(line))
+                f.write("\n")
+
+    @deblog
+    def getLinePoints(self):
+        """
+        HoughLinesで取得するlines は
+            [[rho, theta],...]
+        と表現される。 それを
+            [[(x1,y1), (x2,y2)],...]
+        に変換する
+        """
+        self.linePoints = []
+        for rho, theta in self.lines:
+            a = np.cos(theta)
+            b = np.sin(theta)
+            x0 = a * rho
+            y0 = b * rho
+            x1 = int(x0 + 1000 * (-b))
+            y1 = int(y0 + 1000 * (a))
+            x2 = int(x0 - 1000 * (-b))
+            y2 = int(y0 - 1000 * (a))
+            self.linePoints.append([(x1, y1), (x2, y2)])
+        self.logger.debug('linePoints: # : %d' % len(self.linePoints))
+        self.logger.debug('linePoints: %s' % str(self.linePoints))
 
