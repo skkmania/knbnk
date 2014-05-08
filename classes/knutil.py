@@ -76,6 +76,7 @@ def check_test_environment(param_dict, bookId):
 
 def mkFilename(obj, fix, outdir=None, ext=None):
     """
+     obj : KnKomaを想定(imgfname をpropertyにもつ)
      fix : file name の末尾に付加する
      outdir : 出力先directoryの指定
      ext : 拡張子の指定 .txt のように、. ではじめる
