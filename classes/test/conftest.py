@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 #import os.path
-import pytest
+#import pytest
 import copy
-#import json
+import json
+import shutil
 from classes.knparam import KnParam
 import classes.knutil as ku
 
@@ -12,7 +13,7 @@ DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data'
 Default_Param = {
     "param": {
         "arcdir":      DATA_DIR,
-        "workdir":     DATA_DIR
+        "topdir":      DATA_DIR
     },
     "book": {
         "height":       600,
@@ -48,9 +49,7 @@ def pytest_funcarg__knp(request):
     spec = {
         "param": {
             "logfilename": "kn021",
-            "arcdir":      DATA_DIR,
             "outdir":      "/".join([DATA_DIR, "1091460"]),
-            "workdir":     DATA_DIR,
             "paramfdir":   "1091460",
             "paramfname":  "knp.json",
             "balls":       ["1091460"]
@@ -80,9 +79,7 @@ def pytest_funcarg__kn005(request):
     spec = {
         "param": {
             "logfilename": "kn005",
-            "arcdir":      DATA_DIR,
             "outdir":      "/".join([DATA_DIR, "twletters"]),
-            "workdir":     DATA_DIR,
             "paramfdir":   "twletters",
             "paramfname":  "twlkn005.json",
             "balls":       ["twletters"]
@@ -112,9 +109,7 @@ def pytest_funcarg__knManyLines(request):
     spec = {
         "param": {
             "logfilename": "knM007",
-            "arcdir":      DATA_DIR,
             "outdir":      "/".join([DATA_DIR, "1142178"]),
-            "workdir":     DATA_DIR,
             "paramfdir":   "1142178",
             "paramfname":  "knMany007.json",
             "balls":       ["1142178"]
@@ -152,9 +147,7 @@ def pytest_funcarg__knFewLines(request):
     spec = {
         "param": {
             "logfilename": "knF006",
-            "arcdir":      DATA_DIR,
             "outdir":      "/".join([DATA_DIR, "1123003"]),
-            "workdir":     DATA_DIR,
             "paramfdir":   "1123003",
             "paramfname":  "knMany006.json",
             "balls":       ["1123003"]
@@ -190,9 +183,7 @@ def pytest_funcarg__graph2(request):
     spec = {
         "param": {
             "logfilename": "kngraph2_009",
-            "arcdir":      DATA_DIR,
             "outdir":      "/".join([DATA_DIR, "graph2"]),
-            "workdir":     DATA_DIR,
             "paramfdir":   "graph2",
             "paramfname":  "kngraph2.json",
             "balls":       ["graph2"]
@@ -225,9 +216,7 @@ def pytest_funcarg__b1g101(request):
     spec = {
         "param": {
             "logfilename": "kn021",
-            "arcdir":      DATA_DIR,
             "outdir":      "/".join([DATA_DIR, "b1g101"]),
-            "workdir":     DATA_DIR,
             "paramfdir":   "b1g101",
             "paramfname":  "b1g101.json",
             "balls":       ["b1g101"]
@@ -252,6 +241,74 @@ def pytest_funcarg__b1g101(request):
     return KnParam(param_dict)
 
 
+def pytest_funcarg__b1g1011(request):
+    """
+    両側とも全面挿絵のサンプル
+    """
+    param_dict = copy.deepcopy(Default_Param)
+    spec = {
+        "param": {
+            "logfilename": "kn021",
+            "outdir":      "/".join([DATA_DIR, "b1g101"]),
+            "paramfdir":   "b1g101",
+            "paramfname":  "b1g101.json",
+            "balls":       ["b1g101"]
+        },
+        "book": {
+            "bookdir":      'b1g101',
+            "bookId":       "b1g101",
+        },
+        "koma": {
+            "scale_size":   320.0,
+            "komadir":      'k021',
+            "komaId":       21,
+            "komaIdStr":    "021",
+            "imgfname":     "021.jpeg"
+        },
+        "page": {
+            "imgfname":     "021_0.jpeg",
+        }
+    }
+    for k, v in param_dict.items():
+        v.update(spec[k])
+    ku.check_test_environment(param_dict, 'b1g1011')
+    return KnParam(param_dict)
+
+
+def pytest_funcarg__b1g1012(request):
+    """
+    両側とも全面挿絵のサンプル
+    """
+    param_dict = copy.deepcopy(Default_Param)
+    spec = {
+        "param": {
+            "logfilename": "kn021",
+            "outdir":      "/".join([DATA_DIR, "b1g101"]),
+            "paramfdir":   "b1g101",
+            "paramfname":  "b1g101.json",
+            "balls":       ["b1g101"]
+        },
+        "book": {
+            "bookdir":      'b1g101',
+            "bookId":       "b1g101",
+        },
+        "koma": {
+            "scale_size":   960.0,
+            "komadir":      'k021',
+            "komaId":       21,
+            "komaIdStr":    "021",
+            "imgfname":     "021.jpeg"
+        },
+        "page": {
+            "imgfname":     "021_0.jpeg",
+        }
+    }
+    for k, v in param_dict.items():
+        v.update(spec[k])
+    ku.check_test_environment(param_dict, 'b1g1011')
+    return KnParam(param_dict)
+
+
 def pytest_funcarg__b1g102(request):
     """
     両側とも全面挿絵のサンプル
@@ -260,9 +317,7 @@ def pytest_funcarg__b1g102(request):
     spec = {
         "param": {
             "logfilename": "kn106",
-            "arcdir":      DATA_DIR,
             "outdir":      "/".join([DATA_DIR, "b1g102"]),
-            "workdir":     DATA_DIR,
             "paramfdir":   "b1g102",
             "paramfname":  "b1g102.json",
             "balls":       ["b1g102"]
@@ -292,9 +347,7 @@ def pytest_funcarg__knbk1(request):
     spec = {
         "param": {
             "logfilename": "knbk1",
-            "arcdir":      DATA_DIR,
             "outdir":      "/".join([DATA_DIR, "1091460"]),
-            "workdir":     DATA_DIR,
             "paramfdir":   "1091460",
             "paramfname":  "knbk1.json",
             "balls":       ["1091460"]
@@ -319,47 +372,98 @@ def pytest_funcarg__knbk1(request):
     return KnParam(param_dict)
 
 
-def pytest_runtest_setup(item):
-    pass
+def generate_param_dicts(param_dict, v_list):
+    """
+        既存のparam_dictをもとにして新しいparam_dictを複数つくり、そのリストを返す
+    入力:
+        param_dict : 既存のparam_dict.
+                     これをもとにして新しいparam_dictを複数つくる
+        v_list   : 適用したいlistを、
+                      {"key1": {"key1_1" ： [values1],
+                                "key1_2" ： [values2]},
+                       "key2": {"key2_1" ： [values3}}
+                   という形で与える
+    戻り値:
+        param_dictにv_listを反映させた新しいparam_dictからなるリスト。
+        その長さは、len(values1) * len(values2) * ...となる
+    使用例:
+        param_dict = {
+        "koma": {
+            "komadir":      'k001',
+            "komaId":       1,
+            },
+        "page": {
+            "imgfname":     "001_0.jpeg"
+        }}
+        v_list = {
+        "koma": {
+            "komadir":      ['k001', 'k002', 'k003'],
+            },
+        "page": {
+            "imgfname":     ["001_0.jpeg", "001_1.jpeg"]
+        }}
+        とすると戻り値は 長さが6(=3*2)のリストとなる。
+     長くなるので、変化しているところだけ記すと次のようなイメージ。
+        [ { "koma": {
+                "komadir":      'k001', }
+            "page": {
+                "imgfname":     "001_0.jpeg" } },
+          { "koma": {
+                "komadir":      'k002', }
+            "page": {
+                "imgfname":     "001_0.jpeg" } },
+            ------
+            以下略
+        ]
+
+         ココロとしては、既存のparameter fileに対して
+             対象画像を一気に増やしたい
+             cannyのparameterをいろいろと変えてみたい
+         というときに使う
+    """
+    ret = []
+    for key1, dict1 in v_list.items():
+        for key2, list1 in dict1.items():
+            for v in list1:
+                new_param = mydeepcopy(param_dict)
+                new_param[key1][key2] = v
+                ret.append(new_param)
+    return ret
 
 
-def pytest_collect_file(parent, path):
-    if path.ext == ".yml" and path.basename.startswith("test"):
-        return YamlFile(path, parent)
+def mydeepcopy(param_dict):
+    """
+    deep copy recursively
+    """
+    ret = {}
+    for k, d in param_dict.items():
+        ret[k] = {}
+        for k2, v in d.items():
+            ret[k][k2] = copy.deepcopy(v)
+    return ret
 
 
-class YamlFile(pytest.File):
-    def collect(self):
-        import yaml  # we need a yaml parser, e.g. PyYAML
-        raw = yaml.safe_load(self.fspath.open())
-        for name, spec in raw.items():
-            yield YamlItem(name, self, spec)
+def edit_parms_file(pfbody=None, imfname=None, opts=None, data_dir=None):
+    if data_dir:
+        DATA_DIR = data_dir
+    if imfname:
+        img_fname = DATA_DIR + '/' + imfname
+    if pfbody:
+        pfname = DATA_DIR + '/%s.json' % pfbody
+        with open(pfname) as f:
+            lines = f.readlines()
+            params = json.loads(''.join(lines))
+        params['imgfname'] = img_fname
+        params['komanumstr'] = imfname.split('.')[0]
+        params['outfilename'] = DATA_DIR + '/' +\
+            pfbody + '_' + imfname.split('.')[0]
+        shutil.move(pfname, pfname + '.bak')
+    else:
+        params = {}
 
+    if opts:
+        for k in opts:
+            params[k] = opts[k]
 
-class YamlItem(pytest.Item):
-    def __init__(self, name, parent, spec):
-        super(YamlItem, self).__init__(name, parent)
-        self.spec = spec
-
-    def runtest(self):
-        for name, value in self.spec.items():
-            # some # custom # test # execution
-            # (dumb # example # follows)
-            if name != value:
-                raise YamlException(self, name, value)
-
-    def repr_failure(self, excinfo):
-        """ called when self.runtest() raises an exception. """
-        if isinstance(excinfo.value, YamlException):
-            return "\n".join([
-                "usecase execution failed",
-                "   spec failed: %r: %r" % excinfo.value.args[1:3],
-                "   no further details known at this point."
-            ])
-
-    def reportinfo(self):
-        return self.fspath, 0, "usecase: %s" % self.name
-
-
-class YamlException(Exception):
-    """ custom exception for error reporting. """
+    with open(params["paramfname"], "w") as f:
+        json.dump(params, f, sort_keys=False, indent=4)

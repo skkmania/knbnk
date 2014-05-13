@@ -57,20 +57,30 @@ class KnKoma:
             self.logger = logging.getLogger(param['param']['loggername'])
             self.logger.warning("KnKoma initialized :\n"
                                 + pprint.pformat(self.p))
-            self.komadir = '/'.join([param['param']['workdir'],
-                           param['book']['bookdir'],
-                           param['koma']['komadir']])
-            self.workdir = self.p['koma']['komadir']
-            if 'imgfullpath' in param['koma']:
-                self.imgfname = param['koma']['imgfullpath']
-            else:
-                self.imgfname = "/".join([self.komadir,
-                                          self.p['koma']['imgfname']])
+            self.komafp = '/'.join([param['param']['topdir'],
+                          param['book']['bookdir'],
+                          param['koma']['komadir']])
+            self.imgfp = "/".join([self.komafp,
+                                   self.p['koma']['imgfname']])
             self.get_img()
             self.im = ku.ImageManager(self)
+            self.set_pages_in_koma()
 
     def __exit__(self, type, value, traceback):
         self.logger.debug('exit')
+
+    @ku.deblog
+    def set_pages_in_koma(self):
+        """
+        このコマに何ページあるのかを決定する
+        副作用: self.pages_in_koma を設定する
+        """
+        if 'pages_in_koma' in self.p['book']:
+            # book 全体にわたり決まっていて、所与ならばそれに従う
+            self.pages_in_koma = self.p['book']['pages_in_koma']
+        else:
+            # 所与でないなら、画像により判断する
+            self.pages_in_koma = self.im.find_pages_in_img()
 
     @ku.deblog
     def start(self):
@@ -85,6 +95,12 @@ class KnKoma:
 
     @ku.deblog
     def mk_page_param_dicts(self):
+        """
+        pageをつくるKnParam obj をつくるためのparameter(dict obj)を用意する。
+        副作用: self.page_param_dicts を設定する
+        pageは複数個ありうるので、常にリストとして持つ
+
+        """
         ret = [
             {
                 "lr": "right",
@@ -101,10 +117,10 @@ class KnKoma:
 
     @ku.deblog
     def get_img(self):
-        if os.path.exists(self.imgfname):
-            self.img = cv2.imread(self.imgfname)
+        if os.path.exists(self.imgfp):
+            self.img = cv2.imread(self.imgfp)
             if self.img is None:
-                raise KnKomaException(self.imgfname + 'cannot be read')
+                raise KnKomaException(self.imgfp + 'cannot be read')
             else:
                 self.height, self.width, self.depth = self.img.shape
                 self.centroids = []
@@ -114,7 +130,7 @@ class KnKoma:
                 self.gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
                 self.getBinarized()
         else:
-            raise KnKomaException('%s not found' % self.imgfname)
+            raise KnKomaException('%s not found' % self.imgfp)
 
     @ku.deblog
     def simply_divide_half(self):
@@ -177,31 +193,43 @@ class KnKoma:
                                   o['center']:o['right']]
 
     @ku.deblog
-    def mk_page_dirname(self):
-        self.pagedirname = {}
+    def mk_img_dirname(self):
+        """
+        """
         if self.im.complemented:
-            self.pagedirname = {}
-            self.pagedirname['right'] = '/complemented/right'
-            self.pagedirname['left'] = '/complemented/left'
+            ret = 'ss_%d' % self.parameters['scale_size']
+            self.imgdirname = ret + '/complemented'
         else:
-            #ret = 'ss_%d' % self.scale_size
-            ret = 'can_%d_%d_%d' % tuple(self.parameters['canny'])
+            ret = 'ss_%d' % self.parameters['scale_size']
+            ret += '/can_%d_%d_%d' % tuple(self.parameters['canny'])
             ret += '/hgh_%d_%d_%d' % tuple(self.parameters['hough'])
-            self.pagedirname['right'] = ret + '/right'
-            self.pagedirname['left'] = ret + '/left'
+            self.imgdirname = ret
+
+    @ku.deblog
+    def mk_page_dirname(self):
+        """
+        """
+        if not hasattr(self, 'imgdirname'):
+            self.mk_img_dirname()
+        self.pagedirname = {
+            'right': self.imgdirname + '/right',
+            'left': self.imgdirname + '/left'
+        }
 
     @ku.deblog
     def mk_page_dir_and_write_img_file(self):
-        pagedir = '%s/%s' % (self.komadir, self.page_param_dicts[0]['pagedir'])
+        pagedir = '%s/%s' % (self.komafp, self.page_param_dicts[0]['pagedir'])
         if not os.path.exists(pagedir):
             os.makedirs(pagedir)
-        self.right_page_fname = '/'.join([pagedir, self.page_param_dicts[0]['imgfname']])
+        self.right_page_fname = '/'.join(
+            [pagedir, self.page_param_dicts[0]['imgfname']])
         cv2.imwrite(self.right_page_fname, self.rightPage)
 
-        pagedir = '%s/%s' % (self.komadir, self.page_param_dicts[1]['pagedir'])
+        pagedir = '%s/%s' % (self.komafp, self.page_param_dicts[1]['pagedir'])
         if not os.path.exists(pagedir):
             os.makedirs(pagedir)
-        self.left_page_fname = '/'.join([pagedir, self.page_param_dicts[1]['imgfname']])
+        self.left_page_fname = '/'.join(
+            [pagedir, self.page_param_dicts[1]['imgfname']])
         cv2.imwrite(self.left_page_fname, self.leftPage)
 
     def update(self, v):
@@ -240,7 +268,6 @@ class KnKoma:
             cv2.findContours(self.binarized,
                              cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
-
     @ku.deblog
     def makeCandidates(self, umpire=None):
         if umpire is not None:
@@ -268,6 +295,13 @@ class KnKoma:
     def write_data_file(self, outdir=None):
         if not hasattr(self, 'contours'):
             self.getContours()
+        if outdir is None:
+            if not hasattr(self, 'imgdirname'):
+                self.mk_img_dirname()
+            outdir = '%s/%s' % (self.komafp, self.imgdirname)
+            if not os.path.exists(outdir):
+                os.makedirs(outdir)
+
         outfilename = ku.mkFilename(self, 'data', outdir)
         with open(outfilename, 'w') as f:
             f.write("contours\n")
@@ -284,8 +318,47 @@ class KnKoma:
     def write_binarized_file(self, outdir=None):
         if not hasattr(self, 'contours'):
             self.getContours()
+        if outdir is None:
+            outdir = self.prepare_outdir()
         outfilename = ku.mkFilename(self, '_binarized', outdir)
         cv2.imwrite(outfilename, self.binarized)
+
+    @ku.deblog
+    def write_small_img(self, outdir=None):
+        if outdir is None:
+            outdir = self.prepare_outdir()
+        outfilename = ku.mkFilename(self, '_small_img', outdir)
+        cv2.imwrite(outfilename, self.im.small_img)
+        outfilename = ku.mkFilename(self, '_small_img_gray', outdir)
+        cv2.imwrite(outfilename, self.im.small_img_gray)
+        outfilename = ku.mkFilename(self, '_small_img_canny', outdir)
+        cv2.imwrite(outfilename, self.im.small_img_canny)
+
+    def prepare_outdir(self):
+        if not hasattr(self, 'imgdirname'):
+            self.mk_img_dirname()
+        outdir = '%s/%s' % (self.komafp, self.imgdirname)
+        if not os.path.exists(outdir):
+            os.makedirs(outdir)
+        return outdir
+
+    @ku.deblog
+    def write_small_img_with_lines(self, outdir=None):
+        if outdir is None:
+            outdir = self.prepare_outdir()
+        outfilename = ku.mkFilename(self, '_small_img_with_lines', outdir)
+        if not hasattr(self.im, 'small_img_with_lines'):
+            self.im.get_small_img_with_lines()
+        cv2.imwrite(outfilename, self.im.small_img_with_lines)
+
+    @ku.deblog
+    def write_small_img_with_linesP(self, outdir=None):
+        if outdir is None:
+            outdir = self.prepare_outdir()
+        outfilename = ku.mkFilename(self, '_small_img_with_linesP', outdir)
+        if not hasattr(self.im, 'small_img_with_linesP'):
+            self.im.get_small_img_with_linesP()
+        cv2.imwrite(outfilename, self.im.small_img_with_linesP)
 
     @ku.deblog
     def include(self, box1, box2):

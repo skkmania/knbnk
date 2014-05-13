@@ -111,6 +111,8 @@ class TestEstimateLayouts:
         kn.estimate_layouts()
         assert kn.numOfPages == 2
 
+
+class TestEstimateLayouts01:
     def test_estimate_layouts_of_b1g101(self, b1g101):
         b1g101.set_logger("_estimate_layouts_of_b1g101")
         kn = kk.KnKoma(b1g101)
@@ -118,9 +120,29 @@ class TestEstimateLayouts:
         kn.estimate_layouts()
         assert kn.numOfPages == 2
 
+    def test_estimate_layouts_of_b1g1011(self, b1g1011):
+        b1g1011.set_logger("_estimate_layouts_of_b1g1011")
+        kn = kk.KnKoma(b1g1011)
+        kn.write_binarized_file()
+        kn.estimate_layouts()
+        assert kn.numOfPages == 2
+
+    def test_estimate_layouts_of_b1g1012(self, b1g1012):
+        b1g1012.set_logger("_estimate_layouts_of_b1g1012")
+        kn = kk.KnKoma(b1g1012)
+        kn.write_binarized_file()
+        kn.estimate_layouts()
+        assert kn.numOfPages == 2
+
+
+class TestEstimateLayouts02:
     def test_estimate_layouts_of_b1g102(self, b1g102):
         b1g102.set_logger("_estimate_layouts_of_b1g102")
         kn = kk.KnKoma(b1g102)
         kn.write_binarized_file()
+        kn.write_data_file()
+        kn.write_small_img()
+        kn.write_small_img_with_lines()
+        kn.write_small_img_with_linesP()
         kn.estimate_layouts()
         assert kn.numOfPages == 2

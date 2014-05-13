@@ -70,7 +70,7 @@ __all__ = ["KnParam", "KnParamException", "KnParamParamsException"]
 #
 
 MandatoryFields = {
-    "param": ["arcdir", "paramfdir", "workdir", "outdir",
+    "param": ["arcdir", "paramfdir", "topdir", "outdir",
               "paramfname", "logfilename", "balls"],
     "book":  ["bookdir", "bookId"],
     "koma":  ["komadir", "komaId", "komaIdStr",

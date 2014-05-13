@@ -63,8 +63,8 @@ class KnBook:
             raise KnBookParamsException('param must be a KnParam object.')
         self.arcdir = param['param']['arcdir']
         self.bookId = param['book']['bookId']
-        self.bookdir = "/".join([param['param']['workdir'],
-                                 param['book']['bookdir']])
+        self.bookfp = "/".join([param['param']['topdir'],
+                                param['book']['bookdir']])
         self.logger = logging.getLogger(param['param']['loggername'])
         self.logger.warning("KnBook initialized :\n" + pprint.pformat(self.p))
         self.expand()
@@ -96,10 +96,10 @@ class KnBook:
     @ku.deblog
     def set_environment_for_a_koma(self, idx):
         komaIdStr = str(idx).zfill(3)
-        workdir_for_koma = "/".join([self.bookdir, 'k' + komaIdStr])
+        workdir_for_koma = "/".join([self.bookfp, 'k' + komaIdStr])
         if not os.path.exists(workdir_for_koma):
             os.mkdir(workdir_for_koma)
-        imgfname = self.bookdir + '/' + komaIdStr + self.ext
+        imgfname = self.bookfp + '/' + komaIdStr + self.ext
 
         if not os.path.exists(workdir_for_koma + '/' + komaIdStr + self.ext):
             shutil.move(imgfname, workdir_for_koma)
@@ -115,7 +115,7 @@ class KnBook:
             'imgfname':  komaIdStr + self.ext
         })
         ret = kr.KnParam(p)
-        ret.set_logger(name=komaIdStr, logfilename=self.bookdir
+        ret.set_logger(name=komaIdStr, logfilename=self.bookfp
                        + '/k' + komaIdStr + '/test.log')
         return ret
 
@@ -129,34 +129,34 @@ class KnBook:
         else:
             os.mkdir(self.arcdir + '/tmp')
 
-        if not os.path.exists(self.bookdir):
+        if not os.path.exists(self.bookfp):
             cmd = 'tar jxf %s/%s.tar.bz2 -C %s/tmp' % (
                 self.arcdir, self.bookId, self.arcdir)
             self.logger.debug('cmd: %s', cmd)
             os.system(cmd)
             cmd = "find %s/tmp/* -type d -name 'original' -exec mv {} %s \\;"\
-                % (self.arcdir, self.bookdir)
+                % (self.arcdir, self.bookfp)
             self.logger.debug('cmd: %s', cmd)
             os.system(cmd)
             cmd = "find %s/tmp/* -type f -name '*.json' -exec mv {} %s \\;" %\
-                (self.arcdir, self.bookdir)
+                (self.arcdir, self.bookfp)
             self.logger.debug('cmd: %s', cmd)
             os.system(cmd)
             cmd = "find %s/tmp -type d -name '*%s*' -exec mv {} %s \\;" %\
-                (self.arcdir, self.bookId, self.bookdir)
+                (self.arcdir, self.bookId, self.bookfp)
             self.logger.debug('cmd: %s', cmd)
             os.system(cmd)
 
-        if os.path.exists(self.bookdir + '/001.jpeg'):
+        if os.path.exists(self.bookfp + '/001.jpeg'):
             self.ext = '.jpeg'
-        elif os.path.exists(self.bookdir + '/001.jpg'):
+        elif os.path.exists(self.bookfp + '/001.jpg'):
             self.ext = '.jpg'
         else:
             raise 'KnBook#expand: image file 001 not found'
 
     @ku.deblog
     def read_metadata(self):
-        self.metafname = '%s/common_%s.json' % (self.bookdir, self.bookId)
+        self.metafname = '%s/common_%s.json' % (self.bookfp, self.bookId)
         if os.path.exists(self.metafname):
             with open(self.metafname) as f:
                 lines = f.readlines()
@@ -176,7 +176,7 @@ class KnBook:
         """
         self.koma_indicies = range(1, self.komanum + 1)
         for idx in self.koma_indicies:
-            filename = '%s/%s%s' % (self.bookdir, str(idx).zfill(3), self.ext)
+            filename = '%s/%s%s' % (self.bookfp, str(idx).zfill(3), self.ext)
             if not os.path.exists(filename):
                 self.logger.warning('!!! image file %s.%s not found!!!' %
                                     (str(idx), self.ext))

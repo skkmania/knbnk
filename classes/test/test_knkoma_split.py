@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 import pytest
 #import dircache
-import json
+#import json
 import os.path
-import shutil
+#import shutil
+import classes.knparam as kp
 import classes.knkoma as kk
 import classes.knutil as ku
+import conftest as ct
 # DATA_DIRにtar ballを置いておけばテストが走るという使い方をすること
 #  例えば、1123033.tar.bz2をおいておきテストを実行すると
 #  DATA_DIR/1123033 がつくられ、そこにparameter fileと結果のfileが展開される
@@ -16,92 +18,6 @@ import classes.knutil as ku
 
 HOME_DIR = u"/home/skkmania"
 DATA_DIR = HOME_DIR + u"/mnt2/workspace/pysrc/knbnk/data"
-
-
-def generate_opts(opts_list, kvs_list, data_dir=DATA_DIR):
-    """
-    入力:
-        opts_list : 既存のoptのlist
-        kvs_list   : 適用したい{key： [values]}のlist
-    戻り値:
-        opt_listにkvs_listを反映させたもの。
-        optのlist
-        その長さは、len(opts_list) * len(kvs_list)となる
-    使用例:
-        opts_list = [{"a":10}, {"b":20}]
-        kvs_list = [{"a":[10,20,30,40]}, {"b":[30,40,50,60]}]
-        とすると戻り値は
-        [{"a":10}, {"a":20}, {"a":30}, {"a":40},
-         {"b":20}, {"b":30}, {"b":40}, {"b":50}, {"b":60}]
-         となる。
-         ココロとしては、既存のparameter fileに対して
-             対象画像を一気に増やしたい
-             cannyのparameterをいろいろと変えてみたい
-         というときに使う
-    """
-    ret = []
-    for kvs in kvs_list:
-        key = kvs.keys()[0]
-        values = kvs.values()[0]
-        for opt in opts_list:
-            for value in values:
-                new_opt = opt.copy()
-                if key in opt:
-                    if opt[key] != value:
-                        new_opt[key] = value
-                        ret.append(new_opt)
-                else:
-                    new_opt[key] = value
-                    ret.append(new_opt)
-    return ret
-
-
-class TestGenerateOpts:
-    def test_generate_opts(self, tmpdir):
-        result = generate_opts(opts_list=[{"a": 10}, {"b": 20}],
-                               kvs_list=[{"a": [10, 20, 30, 40]},
-                                         {"b": [30, 40, 50, 60]}])
-        assert {"a": 20} in result
-        dataDirectory = tmpdir.mkdir('data')
-        sampleFile = dataDirectory.join("result.txt")
-        with open(str(sampleFile), 'w') as f:
-            f.write(str(result))
-
-    def test_generate_opts2(self, tmpdir):
-        result = generate_opts(opts_list=[{"a": 10, "b": 20}],
-                               kvs_list=[{"a": [10, 20, 30, 40]},
-                                         {"b": [30, 40, 50, 60]}])
-        assert {"a": 20, "b": 20} in result
-        dataDirectory = tmpdir.mkdir('data')
-        sampleFile = dataDirectory.join("result2.txt")
-        with open(str(sampleFile), 'w') as f:
-            f.write(str(result))
-
-
-def edit_parms_file(pfbody=None, imfname=None, opts=None, data_dir=None):
-    if data_dir:
-        DATA_DIR = data_dir
-    if imfname:
-        img_fname = DATA_DIR + '/' + imfname
-    if pfbody:
-        pfname = DATA_DIR + '/%s.json' % pfbody
-        with open(pfname) as f:
-            lines = f.readlines()
-            params = json.loads(''.join(lines))
-        params['imgfname'] = img_fname
-        params['komanumstr'] = imfname.split('.')[0]
-        params['outfilename'] = DATA_DIR + '/' +\
-            pfbody + '_' + imfname.split('.')[0]
-        shutil.move(pfname, pfname + '.bak')
-    else:
-        params = {}
-
-    if opts:
-        for k in opts:
-            params[k] = opts[k]
-
-    with open(params["paramfname"], "w") as f:
-        json.dump(params, f, sort_keys=False, indent=4)
 
 
 class TestEnoughLines:
@@ -117,7 +33,7 @@ class TestEnoughLines:
         cf.prepareForLines()
         cf.getHoughLines()
         cf.get_small_img_with_lines()
-        cf.write_small_img_with_lines()
+        k007.write_small_img_with_lines()
         result = cf.enoughLines()
         assert result is True
 
@@ -142,7 +58,6 @@ class TestDivide:
     def test_divide(self, knManyLines):
         knManyLines.set_logger("_divide_M")
         k007 = kk.KnKoma(knManyLines)
-        cf = ku.ImageManager(k007)
         k007.divide()
         assert k007.leftPage is not None
         assert k007.rightPage is not None
@@ -152,10 +67,65 @@ class TestMakePagesEnvironments:
     def test_make_pages_environment(self, knManyLines):
         knManyLines.set_logger("_mk_penv")
         k007 = kk.KnKoma(knManyLines)
-        cf = ku.ImageManager(k007)
         k007.make_pages_environment()
         assert os.path.exists(k007.right_page_fname)
-        assert os.path.exists(k007.left_page_fname )
+        assert os.path.exists(k007.left_page_fname)
+
+
+class TestMakePagesEnvironments2:
+    def test_make_pages_environment2(self, knManyLines):
+        knManyLines.set_logger("_mk_penv2")
+        k007 = kk.KnKoma(knManyLines)
+        k007.make_pages_environment()
+        k007.write_binarized_file()
+        k007.write_data_file()
+        k007.write_small_img()
+        k007.write_small_img_with_lines()
+        k007.write_small_img_with_linesP()
+        assert os.path.exists(k007.right_page_fname)
+        assert os.path.exists(k007.left_page_fname)
+
+
+class TestMakePagesEnvironments21:
+    """
+    parameter
+    を変化させ、一度に実行し、その結果を比較する例
+    これは、scale_sizeを３通り試している。
+    この結果だけみると、320でじゅうぶん。
+    もっとも、小さくしても処理時間の節約にはならなかったのであまり意味のないテストだった
+    """
+    def test_make_pages_environment21(self, knManyLines):
+        vlist = {"koma": {"scale_size": [960.0, 640.0, 320.0]}}
+        plist = ct.generate_param_dicts(knManyLines, vlist)
+        for idx, p in enumerate(plist):
+            with ku.Timer() as t:
+                newParam = kp.KnParam(p)
+                newParam.set_logger("_mk_penv21_%d" % idx)
+                k007 = kk.KnKoma(newParam)
+                k007.make_pages_environment()
+                k007.write_binarized_file()
+                k007.write_data_file()
+                k007.write_small_img()
+                k007.write_small_img_with_lines()
+                k007.write_small_img_with_linesP()
+
+            k007.logger.info("=> elasped time: %s s" % t.secs)
+            assert os.path.exists(k007.right_page_fname)
+            assert os.path.exists(k007.left_page_fname)
+
+
+class TestMakePagesEnvironments3:
+    def test_make_pages_environment3(self, knFewLines):
+        knFewLines.set_logger("_mk_penv3")
+        k007 = kk.KnKoma(knFewLines)
+        k007.make_pages_environment()
+        k007.write_binarized_file()
+        k007.write_data_file()
+        k007.write_small_img()
+        k007.write_small_img_with_lines()
+        k007.write_small_img_with_linesP()
+        assert os.path.exists(k007.right_page_fname)
+        assert os.path.exists(k007.left_page_fname)
 
 
 class TestFindCornerLines:
@@ -211,6 +181,7 @@ class TestSmallImageP:
         im.write_lines_to_file()
         assert im.small_img_with_linesP is not None
 
+
 class TestGetHoughLinesWithManyPatterns:
     @pytest.mark.parametrize("pfbody,imfname", [
         ("hough_1_2_100", "007.jpeg"),
@@ -230,17 +201,21 @@ class TestGetHoughLinesWithParamGenerator:
         data_dir = DATA_DIR + '/' + bookId
         ku.check_book_directory(bookId)
         src = {
-            "scale_size": [480.0, 320.0],
-            "boundingRect": [[16, 32]],
+            "koma": {
+                "scale_size": [480.0, 320.0],
+                "canny": [[50, 150, 3], [50, 100, 3]],
+                "hough": [[1, 2, 80], [1, 90, 80], [1, 180, 150]]
+            },
+            "page": {
+                "boundingRect": [[16, 32]],
+                "mode": ["EXTERNAL"],
+                "method": ["NONE"],
+                "canny": [[50, 150, 3], [50, 100, 3]]
+            },
             "komanumstr": ["001"],
             "imgfname": map(lambda x:
                             data_dir + '/' + ('%03d' % x) + '.jpeg',
                             range(11, 21)),
-            "mode": ["EXTERNAL"],
-            "canny": [[50, 150, 3], [50, 100, 3]],
-            "hough": [[1, 2, 80], [1, 90, 80], [1, 180, 150]],
-            "method": ["NONE"],
-            "outdir": [data_dir]
         }
         result = ku.params_generator(src)
         files = ku.print_params_files(result)

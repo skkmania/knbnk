@@ -2,6 +2,7 @@
 import json
 import os
 import os.path
+import time
 import numpy as np
 import itertools
 import sys
@@ -46,10 +47,10 @@ class KnUtilParamsException(Exception):
 def print_params_files(params_list):
     ret = []
     for params in params_list:
-        workdir = params['param']['workdir']
+        topdir = params['param']['topdir']
         paramfdir = params['param']['paramfdir']
         paramfname = params['param']['paramfname']
-        fname = "/".join([workdir, paramfdir, paramfname])
+        fname = "/".join([topdir, paramfdir, paramfname])
         with open(fname, 'w') as f:
             json.dump(params, f, sort_keys=False, indent=4)
             ret.append(fname)
@@ -81,8 +82,8 @@ def mkFilename(obj, fix, outdir=None, ext=None):
      outdir : 出力先directoryの指定
      ext : 拡張子の指定 .txt のように、. ではじめる
     """
-    dirname = os.path.dirname(obj.imgfname)
-    basename = os.path.basename(obj.imgfname)
+    dirname = os.path.dirname(obj.imgfp)
+    basename = os.path.basename(obj.imgfp)
     if fix == 'data':
         name, ext = os.path.splitext(basename)
         if hasattr(obj, 'outfilename'):
@@ -320,6 +321,13 @@ class ImageManager:
             self.get_corner_lines()
 
     @deblog
+    def find_pages_in_img(self):
+        """
+        KnKoma obj から問い合わせをうけ、画像のなかのページを探し、その数を答える
+        出力: integer : page の数
+        """
+
+    @deblog
     def get_original_corner(self):
         self.originalCorner = {}
         for d in ['upper', 'lower', 'center', 'right', 'left']:
@@ -348,7 +356,7 @@ class ImageManager:
                 self.findCornerLines()
                 if self.isCenterAmbiguous():
                     self.findCenterLine()
-                # self.verifyCornerLines()
+        # self.verifyCornerLines()
                 break
             else:
                 self.logger.debug(
@@ -669,6 +677,8 @@ class ImageManager:
     @deblog
     def get_small_img_with_linesP(self):
         self.small_img_with_linesP = self.small_img.copy()
+        if not hasattr(self, 'linesP'):
+            self.getHoughLinesP()
         for line in self.linesP[0]:
             pt1 = tuple(line[:2])
             pt2 = tuple(line[-2:])
@@ -676,39 +686,11 @@ class ImageManager:
                      pt1, pt2, (0, 0, 255), 2)
 
     @deblog
-    def write_small_img(self, outdir=None):
-        if outdir is None:
-            outdir = '%s/ss_%d' % (self.tgtObj.komadir,
-                                int(self.parameters['scale_size']))
-        if not os.path.exists(outdir):
-            os.makedirs(outdir)
-        outfilename = mkFilename(self.tgtObj, '_small_img', outdir)
-        cv2.imwrite(outfilename, self.small_img)
-        outfilename = mkFilename(self.tgtObj, '_small_img_gray', outdir)
-        cv2.imwrite(outfilename, self.small_img_gray)
-        outfilename = mkFilename(self.tgtObj, '_small_img_canny', outdir)
-        cv2.imwrite(outfilename, self.small_img_canny)
-
-    @deblog
-    def write_small_img_with_lines(self, outdir=None):
-        if outdir is None:
-            outdir = '%s/ss_%d' % (self.tgtObj.komadir,
-                                int(self.parameters['scale_size']))
-        if not os.path.exists(outdir):
-            os.makedirs(outdir)
-        outfilename = mkFilename(self.tgtObj, '_small_img_with_lines', outdir)
-        cv2.imwrite(outfilename, self.small_img_with_lines)
-
-    @deblog
-    def write_small_img_with_linesP(self, outdir=None):
-        outfilename = mkFilename(self.tgtObj, '_small_img_with_linesP', outdir)
-        cv2.imwrite(outfilename, self.small_img_with_linesP)
-
-    @deblog
     def write_linesP_to_file(self, outdir=None):
         if not hasattr(self, 'linesP'):
             self.getHoughLinesP()
-        outfilename = mkFilename(self.tgtObj, '_linesP_data', outdir, ext='.txt')
+        outfilename = mkFilename(self.tgtObj,
+                                 '_linesP_data', outdir, ext='.txt')
         with open(outfilename, 'w') as f:
             f.write("stat\n")
             f.write("linesP\n")
@@ -728,7 +710,8 @@ class ImageManager:
                 return False
         if not hasattr(self, 'linePoints'):
             self.getLinePoints()
-        outfilename = mkFilename(self.tgtObj, '_lines_data', outdir, ext='.txt')
+        outfilename = mkFilename(self.tgtObj,
+                                 '_lines_data', outdir, ext='.txt')
         with open(outfilename, 'w') as f:
             f.write("stat\n")
             f.write("len of lines : " + str(len(self.lines)) + "\n")
@@ -768,3 +751,18 @@ class ImageManager:
         self.logger.debug('linePoints: # : %d' % len(self.linePoints))
         self.logger.debug('linePoints: %s' % str(self.linePoints))
 
+
+class Timer(object):
+    def __init__(self, verbose=False):
+        self.__verbose = verbose
+
+    def __enter__(self):
+        self.start = time.time()
+        return self
+
+    def __exit__(self, *args):
+        self.end = time.time()
+        self.secs = self.end - self.start
+        self.msecs = self.secs * 1000  # millisecs
+        if self.__verbose:
+            print 'elapsed time: %f ms' % self.msecs
