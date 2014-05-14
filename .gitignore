@@ -4,6 +4,7 @@ __pycache__/
 book/
 *.pyc
 .ropeproject
+classes/.ropeproject
 classes/.ropeproject/*
 .ropeproject/*
 **/.ropeproject/**
