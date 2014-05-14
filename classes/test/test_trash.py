@@ -3,21 +3,106 @@ import pytest
 #import dircache
 #import json
 import os.path
+import copy
 #import shutil
 import classes.knparam as kp
 import classes.knkoma as kk
 import classes.knutil as ku
 import conftest as ct
-# DATA_DIRにtar ballを置いておけばテストが走るという使い方をすること
-#  例えば、1123033.tar.bz2をおいておきテストを実行すると
-#  DATA_DIR/1123033 がつくられ、そこにparameter fileと結果のfileが展開される
-#  そのためのparameterのデータはこのテスト用のファイルか、ここから読み込む
-#  設定ファイルにおく
-#  testを終え、必要な確認やデータの保存をすませたあとは
-#  DATA_DIR/1123033は削除してしまえばよいものとする
 
 HOME_DIR = u"/home/skkmania"
-DATA_DIR = HOME_DIR + u"/mnt2/workspace/pysrc/knbnk/data"
+DATA_DIR = HOME_DIR + u"/mnt2/workspace/pysrc/knbnk/data/trash_test"
+
+booklist = [1017291, 1076682, 1076709, 1076739, 1168886, 1223403, 1444899,
+            1786283, 1901681, 1901692, 908385, 914431, 919261, 922478,
+            925097, 936469, 936712, 942786, 950546, 967662, 967664,
+            967718, 967720, 970694, 980717, 982260, 987245]
+
+Default_Param = {
+    "param": {
+        "arcdir":      DATA_DIR,
+        "topdir":      DATA_DIR
+    },
+    "book": {
+        "height":       600,
+        "width":        400,
+        "pages_in_koma": 2,
+        "dan":          1,
+        "vorh":         "vert",
+        "morc":         "mono",
+        "keisen":       "no",
+        "waku":         "yes"
+    },
+    "koma": {
+        "scale_size":   640.0,
+        "hough":        [1, 2, 100],
+        "canny":        [50, 200, 3],
+    },
+    "page": {
+        "pagedir":      "/".join(['can_50_200_3', 'hgh_1_2_100', 'right']),
+        "lr":           "right",
+        "mavstd":       10,
+        "pgmgn":        [0.05, 0.05],
+        "ismgn":        [15, 5],
+        "toobig":       [200, 200],
+        "boundingRect": [16, 32],
+        "mode":         "EXTERNAL",
+        "method":       "NONE",
+        "canny":        [50, 200, 3]
+    }
+}
+
+
+def pytest_funcarg__trash(request):
+    param_dict = copy.deepcopy(Default_Param)
+    spec = {
+        "param": {
+            "logfilename": "trash",
+            "outdir":      "/".join([DATA_DIR, "1076739"]),
+            "paramfdir":   "1076739",
+            "paramfname":  "trash1076739.json",
+            "balls":       ["1076739"]
+        },
+        "book": {
+            "bookdir":      "1076739",
+            "bookId":       "1076739"
+        },
+        "koma": {
+            "komadir":      'k001',
+            "komaId":       1,
+            "komaIdStr":    "001",
+            "imgfname":     "001.jpeg"
+        },
+        "page": {
+            "imgfname":     "001_0.jpeg"
+        }
+    }
+    for k, v in param_dict.items():
+        v.update(spec[k])
+    return kp.KnParam(param_dict)
+
+
+class TestMakePagesEnvironments22:
+    """
+    parameter
+    を変化させ、一度に実行し、その結果を比較する例
+    これは、scale_sizeを３通り試している。
+    """
+    def test_make_pages_environment22(self, trash):
+        vlist = {"koma": {"scale_size": [960.0, 640.0, 320.0]}}
+        plist = ct.generate_param_dicts(trash, vlist)
+        for idx, p in enumerate(plist):
+            with ku.Timer() as t:
+                newParam = kp.KnParam(p)
+                newParam.set_logger("_mk_penv21_%d" % idx)
+                k007 = kk.KnKoma(newParam)
+                k007.write_binarized_file()
+                k007.write_data_file()
+                k007.write_small_img()
+                k007.write_small_img_with_lines()
+                k007.write_small_img_with_linesP()
+
+            k007.logger.info("=> elasped time: %s s" % t.secs)
 
 
 class TestEnoughLines:
@@ -176,7 +261,7 @@ class TestSmallImageP:
         im.get_binarized("small")
         im.getHoughLinesP()
         im.get_small_img_with_linesP()
-        k006.write_small_img_with_linesP()
+        im.write_small_img_with_linesP()
         im.write_linesP_to_file()
         im.write_lines_to_file()
         assert im.small_img_with_linesP is not None
@@ -221,9 +306,8 @@ class TestGetHoughLinesWithParamGenerator:
         files = ku.print_params_files(result)
         for params_fname in files:
             kn = kk.KnKoma(params=params_fname)
-            im = ku.ImageManager(kn)
-            im.get_binarized("small")
-            im.getHoughLines()
-            im.get_small_img_with_lines()
+            kn.get_binarized("small")
+            kn.getHoughLines()
+            kn.get_small_img_with_lines()
             kn.write_small_img_with_lines()
-            assert im.small_img_with_lines is not None
+            assert kn.small_img_with_lines is not None

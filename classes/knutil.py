@@ -326,6 +326,13 @@ class ImageManager:
         KnKoma obj から問い合わせをうけ、画像のなかのページを探し、その数を答える
         出力: integer : page の数
         """
+        if self.get_corner_lines() is False:
+            # 1pageなのか無理に2pageにするのか判断が必要。
+            return self.check_1or2()
+        else:
+            # cornerLines が５本あったので２ページと判断する
+            self.pages_in_img = 2
+            return self.pages_in_img
 
     @deblog
     def get_original_corner(self):
@@ -344,7 +351,7 @@ class ImageManager:
         self.cornerLines = {}
         try_count = 0
         while try_count < 5:
-            self.prepareForLines()
+            self.get_binarized("small")
             self.getHoughLines()
             if self.lines is None:
                 self.logger.debug(
@@ -356,8 +363,7 @@ class ImageManager:
                 self.findCornerLines()
                 if self.isCenterAmbiguous():
                     self.findCenterLine()
-        # self.verifyCornerLines()
-                break
+                return self.cornerLines
             else:
                 self.logger.debug(
                     'lines not enough. try count : %d' % try_count)
@@ -365,49 +371,72 @@ class ImageManager:
                 try_count += 1
         else:
             self.logger.debug('KnKoma#divide: retry over 5 times and gave up!')
-            self.complement_corner_lines()
-        return self.cornerLines
+            return False
+
+    def check_1or2(self):
+        """
+        5本に満たないcornerLinesと、
+        その他の情報から、
+        この画像に2ページあるのか、1ページなのかを決定する
+        """
 
     @deblog
-    def prepareForLines(self):
+    def get_binarized(self, flag):
         """
-        縮小画像を作成
+        binarized画像を作成
         hough parameters (rho, theta, minimumVote)をいったん確定しておく
         canny parameters (minval, maxval, apertureSize)をいったん確定しておく
         """
-        if 'scale_size' in self.parameters:
-            self.scale_size = self.parameters['scale_size']
-            self.scale = self.scale_size / self.width
+        if flag == "small":
+            if 'scale_size' in self.parameters:
+                self.scale_size = self.parameters['scale_size']
+                self.scale = self.scale_size / self.width
+            else:
+                raise 'scale_size must be in param file'
+            self.small_img = cv2.resize(self.img,
+                                        (int(self.width * self.scale),
+                                         int(self.height * self.scale)))
+            self.small_height, self.small_width, self.small_depth =\
+                self.small_img.shape
+            self.small_img_gray = cv2.cvtColor(self.small_img,
+                                               cv2.COLOR_BGR2GRAY)
+            obj_img = self.small_img_gray
+        elif flag == "original":
+            self.gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
+            obj_img = self.gray
         else:
-            raise 'scale_size must be in param file'
+            msg = 'ImageManager#get_binarized:' +\
+                'flag must be "small" or "original"'
+            self.logger.fatal(msg)
+            raise msg
 
-        if 'hough' in self.parameters:
-            rho, theta, minimumVote = self.parameters['hough']
-            theta = np.pi / theta
-        else:
-            rho, theta, minimumVote = [1, np.pi / 180, 120]
-
-        if 'canny' in self.parameters:
+        if 'threshold' in self.parameters:
+            thresh_low, thresh_high, typeval = self.parameters['threshold']
+            ret, binarized_img =\
+                cv2.threshold(obj_img, thresh_low, thresh_high, typeval)
+            msg = 'binarized_img created by threshold : %s'\
+                % str(self.parameters['threshold'])
+        elif 'canny' in self.parameters:
             minval, maxval, apertureSize = self.parameters['canny']
-        else:
-            minval, maxval, apertureSize = [50, 200, 3]
+            binarized_img = cv2.Canny(obj_img, minval, maxval, apertureSize)
+            msg = 'binarized_img created by canny : %s'\
+                % str(self.parameters['canny'])
+        elif 'adaptive' in self.parameters:
+            binarized_img =\
+                cv2.adaptiveThreshold(obj_img, self.parameters['adaptive'])
+            msg = 'self.binarized created by adaptive : %s'\
+                % str(self.parameters['adaptive'])
+        self.logger.debug(msg)
 
-        self.small_img = cv2.resize(self.img,
-                                    (int(self.width * self.scale),
-                                     int(self.height * self.scale)))
-        self.small_height, self.small_width, self.small_depth =\
-            self.small_img.shape
-        self.small_img_gray = cv2.cvtColor(self.small_img, cv2.COLOR_BGR2GRAY)
-        self.small_img_canny = cv2.Canny(self.small_img_gray,
-                                         minval, maxval, apertureSize)
-        self.rho = rho
-        self.theta = theta
-        self.minimumVote = minimumVote
+        if flag == "small":
+            self.small_binarized = binarized_img
+        else:
+            self.binarized = binarized_img
 
     @deblog
     def getHoughLines(self):
         """
-        small_img_canny からHough lineを算出しておく
+        small_binarized からHough lineを算出しておく
         戻り値: self.lines lineの配列
             この要素のlineは、(rho, theta). 2次元Hough space上の1点を指す
             OpenCVの戻り値は[[[0,1],[0,2],...,[]]]と外側に配列があるが、
@@ -416,7 +445,17 @@ class ImageManager:
             また、後々の処理の便宜のため、numpyのarrayからpythonのlistに変換し、
             theta, rhoの順に2段のkeyにもとづきsortしておく。
         """
-        tmplines = cv2.HoughLines(self.small_img_canny,
+        if 'hough' in self.parameters:
+            rho, theta, minimumVote = self.parameters['hough']
+            theta = np.pi / theta
+        else:
+            rho, theta, minimumVote = [1, np.pi / 180, 120]
+
+        self.rho = rho
+        self.theta = theta
+        self.minimumVote = minimumVote
+
+        tmplines = cv2.HoughLines(self.small_binarized,
                                   self.rho, self.theta,
                                   self.minimumVote)
         if tmplines is not None:
@@ -663,7 +702,7 @@ class ImageManager:
 
     @deblog
     def getHoughLinesP(self):
-        self.linesP = cv2.HoughLinesP(self.small_img_canny,
+        self.linesP = cv2.HoughLinesP(self.small_binarized,
                                       self.rho, self.theta, self.minimumVote)
 
     @deblog
@@ -750,6 +789,39 @@ class ImageManager:
             self.linePoints.append([(x1, y1), (x2, y2)])
         self.logger.debug('linePoints: # : %d' % len(self.linePoints))
         self.logger.debug('linePoints: %s' % str(self.linePoints))
+
+    @deblog
+    def getContours(self, thresh_low=50, thresh_high=255):
+        """
+        contourの配列を返す
+        """
+        self.contours, self.hierarchy =\
+            cv2.findContours(self.binarized,
+                             cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+
+    @deblog
+    def getBinarized(self):
+        """
+        binarize された配列を self.binarized にセットする
+        parameters必須。
+        """
+        if 'threshold' in self.parameters:
+            thresh_low, thresh_high, typeval = self.parameters['threshold']
+            ret, self.binarized =\
+                cv2.threshold(self.gray, thresh_low, thresh_high, typeval)
+            self.logger.debug('self.binarized created by threshold : %s',
+                              str(self.parameters['threshold']))
+        elif 'canny' in self.parameters:
+            minval, maxval, apertureSize = self.parameters['canny']
+            self.binarized = cv2.Canny(self.gray, minval, maxval, apertureSize)
+            self.logger.debug('self.binarized created by canny : %s',
+                              str(self.parameters['canny']))
+        elif 'adaptive' in self.parameters:
+            self.binarized =\
+                cv2.adaptiveThreshold(self.gray,
+                                      self.parameters['adaptive'])
+            self.logger.debug('self.binarized created by adaptive : %s',
+                              str(self.parameters['adaptive']))
 
 
 class Timer(object):

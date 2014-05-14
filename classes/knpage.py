@@ -249,8 +249,8 @@ class KnPage:
         cv2.imwrite(outfilename, self.small_img)
         outfilename = ku.mkFilename(self, '_small_img_gray', outdir)
         cv2.imwrite(outfilename, self.small_img_gray)
-        outfilename = ku.mkFilename(self, '_small_img_canny', outdir)
-        cv2.imwrite(outfilename, self.small_img_canny)
+        outfilename = ku.mkFilename(self, '_small_binarized', outdir)
+        cv2.imwrite(outfilename, self.small_binarized)
 
     @ku.deblog
     def write_small_img_with_lines(self, outdir):

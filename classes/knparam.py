@@ -263,11 +263,8 @@ class KnParam(dict):
     def get_komaIdStr(self):
         return self['koma']['komaIdStr']
 
-    def set_komaId(self, current, last):
-        if last < 1000:
-            komaIdStr = str(current).zfill(3)
-        else:
-            komaIdStr = str(current).zfill(4)
+    def set_komaId(self, current):
+        komaIdStr = str(current).zfill(3)
         self['koma']['komaIdStr'] = komaIdStr
         self['koma']['komaId'] = current
         return komaIdStr

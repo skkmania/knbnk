@@ -190,7 +190,7 @@ class KnBook:
         (なので、コマ数が少ないときだけ実行すること。)
         """
         for k in range(1, self.komanum + 1):
-            self.p.set_komanum(current=k, last=self.komanum + 1)
+            self.p.set_komaId(current=k)
             koma = kk.KnKoma(param=self.p)
             koma.divide()
 

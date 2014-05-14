@@ -21,6 +21,7 @@ Default_Param = {
         "pages_in_koma": 2,
         "dan":          1,
         "vorh":         "vert",
+        "morc":         "mono",
         "keisen":       "no",
         "waku":         "yes"
     },

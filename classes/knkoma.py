@@ -64,27 +64,13 @@ class KnKoma:
                                    self.p['koma']['imgfname']])
             self.get_img()
             self.im = ku.ImageManager(self)
-            self.set_pages_in_koma()
+            self.estimate_layouts()
 
     def __exit__(self, type, value, traceback):
         self.logger.debug('exit')
 
     @ku.deblog
-    def set_pages_in_koma(self):
-        """
-        このコマに何ページあるのかを決定する
-        副作用: self.pages_in_koma を設定する
-        """
-        if 'pages_in_koma' in self.p['book']:
-            # book 全体にわたり決まっていて、所与ならばそれに従う
-            self.pages_in_koma = self.p['book']['pages_in_koma']
-        else:
-            # 所与でないなら、画像により判断する
-            self.pages_in_koma = self.im.find_pages_in_img()
-
-    @ku.deblog
     def start(self):
-        self.adjust_parameters()
         self.get_page_img()
         self.mk_page_dirname()
         self.mk_page_param_dicts()
@@ -127,8 +113,6 @@ class KnKoma:
                 self.boxes = []
                 self.candidates = {'upper': [], 'lower': [],
                                    'center': [], 'left': [], 'right': []}
-                self.gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
-                self.getBinarized()
         else:
             raise KnKomaException('%s not found' % self.imgfp)
 
@@ -147,20 +131,28 @@ class KnKoma:
         komaに何ページあるのか調べる
         副作用: self.numOfPages の設定
         [str of each page's style]
-
-        調査方法:
-
-            まず外部からページ数などの情報が与えられているかcheck
-            cornerLines を探して５本あれば２ページと判断する
         """
         if 'info' in self.p:
+            # まず外部からページ数などの情報が与えられているかcheck
             if 'numOfPages' in self.p['info']:
                 self.numOfPages = self.p['info']['numOfPages']
-
-            self.verify_given_info()
-
+                self.verify_given_info()
         else:
+            self.set_pages_in_koma()
             self.make_pages_environment()
+
+    @ku.deblog
+    def set_pages_in_koma(self):
+        """
+        このコマに何ページあるのかを決定する
+        副作用: self.pages_in_koma を設定する
+        """
+        if 'pages_in_koma' in self.p['book']:
+            # book 全体にわたり決まっていて、所与ならばそれに従う
+            self.pages_in_koma = self.p['book']['pages_in_koma']
+        else:
+            # 所与でないなら、画像により判断する
+            self.pages_in_koma = self.im.find_pages_in_img()
 
     def verify_given_info(self):
         self.numOfPages = 2
@@ -236,30 +228,6 @@ class KnKoma:
         self.val = v
 
     @ku.deblog
-    def getBinarized(self):
-        """
-        binarize された配列を self.binarized にセットする
-        parameters必須。
-        """
-        if 'threshold' in self.parameters:
-            thresh_low, thresh_high, typeval = self.parameters['threshold']
-            ret, self.binarized =\
-                cv2.threshold(self.gray, thresh_low, thresh_high, typeval)
-            self.logger.debug('self.binarized created by threshold : %s',
-                              str(self.parameters['threshold']))
-        elif 'canny' in self.parameters:
-            minval, maxval, apertureSize = self.parameters['canny']
-            self.binarized = cv2.Canny(self.gray, minval, maxval, apertureSize)
-            self.logger.debug('self.binarized created by canny : %s',
-                              str(self.parameters['canny']))
-        elif 'adaptive' in self.parameters:
-            self.binarized =\
-                cv2.adaptiveThreshold(self.gray,
-                                      self.parameters['adaptive'])
-            self.logger.debug('self.binarized created by adaptive : %s',
-                              str(self.parameters['adaptive']))
-
-    @ku.deblog
     def getContours(self, thresh_low=50, thresh_high=255):
         """
         contourの配列を返す
@@ -293,14 +261,43 @@ class KnKoma:
 
     @ku.deblog
     def write_data_file(self, outdir=None):
+        """
+        画像の統計データをテキストとして出力する
+        """
+        self.write_original_data_file()
+        self.write_small_data_file()
+
+    @ku.deblog
+    def write_original_data_file(self, outdir=None):
+        """
+        original画像の統計データをテキストとして出力する
+        """
         if not hasattr(self, 'contours'):
             self.getContours()
         if outdir is None:
-            if not hasattr(self, 'imgdirname'):
-                self.mk_img_dirname()
-            outdir = '%s/%s' % (self.komafp, self.imgdirname)
-            if not os.path.exists(outdir):
-                os.makedirs(outdir)
+            outdir = self.prepare_outdir()
+
+        outfilename = ku.mkFilename(self, 'data', outdir)
+        with open(outfilename, 'w') as f:
+            f.write("contours\n")
+            for cnt in self.contours:
+                f.writelines(str(cnt))
+                f.write("\n")
+
+            f.write("\n\nhierarchy\n")
+            for hic in self.hierarchy:
+                f.writelines(str(hic))
+                f.write("\n")
+
+    @ku.deblog
+    def write_small_data_file(self, outdir=None):
+        """
+        small画像の統計データをテキストとして出力する
+        """
+        if not hasattr(self, 'contours'):
+            self.getContours()
+        if outdir is None:
+            outdir = self.prepare_outdir()
 
         outfilename = ku.mkFilename(self, 'data', outdir)
         with open(outfilename, 'w') as f:
@@ -319,7 +316,7 @@ class KnKoma:
         if not hasattr(self, 'contours'):
             self.getContours()
         if outdir is None:
-            outdir = self.prepare_outdir()
+            outdir = self.komafp
         outfilename = ku.mkFilename(self, '_binarized', outdir)
         cv2.imwrite(outfilename, self.binarized)
 
@@ -331,8 +328,8 @@ class KnKoma:
         cv2.imwrite(outfilename, self.im.small_img)
         outfilename = ku.mkFilename(self, '_small_img_gray', outdir)
         cv2.imwrite(outfilename, self.im.small_img_gray)
-        outfilename = ku.mkFilename(self, '_small_img_canny', outdir)
-        cv2.imwrite(outfilename, self.im.small_img_canny)
+        outfilename = ku.mkFilename(self, '_small_binarized', outdir)
+        cv2.imwrite(outfilename, self.im.small_binarized)
 
     def prepare_outdir(self):
         if not hasattr(self, 'imgdirname'):
