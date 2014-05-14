@@ -3,6 +3,8 @@ __pycache__/
 */__pycache__/
 book/
 *.pyc
+.ropeproject
 classes/.ropeproject/*
 .ropeproject/*
+**/.ropeproject/**
 
