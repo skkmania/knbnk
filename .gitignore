@@ -5,7 +5,8 @@ book/
 *.pyc
 .ropeproject
 classes/.ropeproject
+classes/.ropeproject/config.py
+classes/.ropeproject/globalnames
+classes/.ropeproject/history
+classes/.ropeproject/objectdb
 classes/.ropeproject/*
-.ropeproject/*
-**/.ropeproject/**
-
