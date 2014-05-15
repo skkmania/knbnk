@@ -74,7 +74,7 @@ MandatoryFields = {
               "paramfname", "logfilename", "balls"],
     "book":  ["bookdir", "bookId"],
     "koma":  ["komadir", "komaId", "komaIdStr",
-              "scale_size", "hough", "canny", "imgfname"],
+              "scale_size", "binarize", "feature", "hough", "imgfname"],
     "page":  ["pagedir", "imgfname", "lr", "boundingRect",
               "mode", "method", "mavstd", "pgmgn", "ismgn", "toobig", "canny"]
 }
@@ -130,8 +130,8 @@ class KnParam(dict):
                 self.read_paramf(param_fname)
             else:
                 raise KnParamParamsException('param_fname must be string.')
-        #self.set_logger()
         self.mandatory_check()
+        self.requirement_check()
 
     def read_paramf(self, param_fname):
         if os.path.exists(param_fname):
@@ -151,6 +151,14 @@ class KnParam(dict):
                 for f in v:
                     if not f in self[k].keys():
                         raise KnParamParamsException(f)
+
+    def requirement_check(self):
+        for k in self["koma"]["binarize"]:
+            if not k in self["koma"]:
+                raise KnParamParamsException(k)
+        for k in self["koma"]["feature"]:
+            if not k in self["koma"]:
+                raise KnParamParamsException(k)
 
     @ku.deblog
     def clone(self):

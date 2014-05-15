@@ -26,9 +26,11 @@ Default_Param = {
         "waku":         "yes"
     },
     "koma": {
-        "scale_size":   640.0,
-        "hough":        [1, 2, 100],
-        "canny":        [50, 200, 3],
+        "scale_size":   [320.0, 640.0],
+        "binarize":     ["canny"],
+        "feature":      ["hough"],
+        "hough":        [[1, 2, 100]],
+        "canny":        [[50, 150, 3], [100, 200, 3]],
     },
     "page": {
         "pagedir":      "/".join(['can_50_200_3', 'hgh_1_2_100', 'right']),

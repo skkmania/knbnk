@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import logging
 import classes.knparam as kr
 import pytest
 
@@ -29,9 +28,9 @@ class TestNew:
         assert 'lacks' in str(e)
 
     def test_new_from_file(self, knp):
-        logging.basicConfig(level=logging.DEBUG)
+        knp.set_logger("_new_from_file")
         knp.logger.debug(str(knp))
-        assert knp['param']['workdir'] == DATA_DIR
+        assert knp['param']['topdir'] == DATA_DIR
 
 
 class TestClone:
@@ -41,6 +40,7 @@ class TestClone:
         clone先の部分的な変更は元のobjectに反映されない
         元のobjectの部分的な変更はclone先に反映されない
         """
+        knp.set_logger("_clone")
         cl = knp.clone()
         assert cl['param']['balls'] == knp['param']['balls']
         cl['param']['balls'] = []
@@ -50,8 +50,10 @@ class TestClone:
         knp['koma']['komaId'] = 3
         assert cl['koma']['komaId'] != knp['koma']['komaId']
 
-
+"""
+しばらくこのテストは保留する
 class TestStart:
     def test_start(self, knp):
         knp.start()
-        assert knp['param']['workdir'] == DATA_DIR
+        assert knp['param']['topdir'] == DATA_DIR
+"""
