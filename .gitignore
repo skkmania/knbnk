@@ -4,11 +4,17 @@ __pycache__/
 book/
 *.pyc
 .ropeproject
-classes/.ropeproject
+.ropeproject/
+.ropeproject/*
+*/.ropeproject
+*/.ropeproject/
+*/.ropeproject/*
 classes/.ropeproject/config.py
 classes/.ropeproject/globalnames
 classes/.ropeproject/history
 classes/.ropeproject/objectdb
+classes/.ropeproject
+classes/.ropeproject/
 classes/.ropeproject/*
 
 # from boiler-plate

@@ -15,7 +15,7 @@ def pytest_funcarg__param_obj(request):
         "param": {
             "arcdir":      DATA_DIR,
             "paramfdir":   bookId,
-            "workdir":     DATA_DIR,
+            "topdir":     DATA_DIR,
             "outdir":      "/".join([DATA_DIR, bookId]),
             "paramfname":  "knkoma1.json",
             "logfilename": "knkoma1",
@@ -29,9 +29,11 @@ def pytest_funcarg__param_obj(request):
             "komadir":      "k001",
             "komaId":       1,
             "komaIdStr":    "001",
-            "scale_size":   640.0,
-            "hough":        [1, 2, 100],
-            "canny":        [50, 200, 3],
+            "scale_size":   [640.0],
+            "binarize":     ["canny"],
+            "feature":      ["hough"],
+            "hough":        [[1, 2, 100]],
+            "canny":        [[50, 200, 3]],
             "imgfname":     "001.jpeg"
         },
         "page": {
