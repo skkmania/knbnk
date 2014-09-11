@@ -95,6 +95,10 @@ class KnBook:
 
     @ku.deblog
     def set_environment_for_a_koma(self, idx):
+        """
+        idxで指定したコマの
+        directoryを作成
+        """	
         komaIdStr = str(idx).zfill(3)
         workdir_for_koma = "/".join([self.bookfp, 'k' + komaIdStr])
         if not os.path.exists(workdir_for_koma):
