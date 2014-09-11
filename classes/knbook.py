@@ -98,6 +98,9 @@ class KnBook:
         """
         idxで指定したコマの
         directoryを作成
+        そこに画像ファイルを移動する
+        
+        戻り値： 移動した画像のフルパス文字列
         """	
         komaIdStr = str(idx).zfill(3)
         workdir_for_koma = "/".join([self.bookfp, 'k' + komaIdStr])
