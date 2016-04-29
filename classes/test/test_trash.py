@@ -10,8 +10,8 @@ import classes.knkoma as kk
 import classes.knutil as ku
 import conftest as ct
 
-HOME_DIR = u"/home/skkmania"
-DATA_DIR = HOME_DIR + u"/mnt2/workspace/pysrc/knbnk/data/trash_test"
+HOME_DIR = 'Z:/Users/skkmania'
+DATA_DIR = HOME_DIR + '/knbnk/data'
 
 booklist = [1017291, 1076682, 1076709, 1076739, 1168886, 1223403, 1444899,
             1786283, 1901681, 1901692, 908385, 914431, 919261, 922478,

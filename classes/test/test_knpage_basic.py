@@ -6,8 +6,8 @@ from classes.knpage import KnPage
 #from classes.knpage import KnPageParamsException
 import classes.knutil as ku
 
-HOME_DIR = '/home/skkmania'
-DATA_DIR = HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data/twletters'
+HOME_DIR = 'Z:/Users/skkmania'
+DATA_DIR = HOME_DIR + '/knbnk/data'
 box01 = (20, 30, 10, 10)
 box02 = (25, 35, 15, 15)
 box03 = (35, 45, 10, 10)

@@ -6,8 +6,8 @@ from hamcrest import *
 from classes.knpage import KnPage
 
 class TestKnPage(unittest.TestCase):
-
-  DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data'
+    HOME_DIR = 'Z:/Users/skkmania'
+    DATA_DIR = HOME_DIR + '/knbnk/data'
 
   # @pytest.fixture
   def test_new(self):

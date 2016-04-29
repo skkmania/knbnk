@@ -6,8 +6,8 @@ from classes.knpage import KnBlockException
 from classes.knpage import KnBlockParamsException
 from classes.knutil import *
 
-HOME_DIR = '/home/skkmania'
-DATA_DIR = HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data/twletters'
+HOME_DIR = 'Z:/Users/skkmania'
+DATA_DIR = HOME_DIR + '/knbnk/data/twletters'
 box01 = (20, 30, 10, 10)
 box02 = (25, 35, 15, 15)
 box03 = (35, 45, 10, 10)

@@ -5,8 +5,8 @@ import classes.knkoma as kk
 import classes.knutil as ku
 import classes.knparam as kp
 
-HOME_DIR = '/home/skkmania'
-DATA_DIR = HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data'
+HOME_DIR = 'Z:/Users/skkmania'
+DATA_DIR = HOME_DIR + '/knbnk/data'
 
 
 def pytest_funcarg__param_obj(request):

@@ -16,8 +16,8 @@ import conftest as ct
 #  testを終え、必要な確認やデータの保存をすませたあとは
 #  DATA_DIR/1123033は削除してしまえばよいものとする
 
-HOME_DIR = u"/home/skkmania"
-DATA_DIR = HOME_DIR + u"/mnt2/workspace/pysrc/knbnk/data"
+HOME_DIR = 'Z:/Users/skkmania'
+DATA_DIR = HOME_DIR + '/knbnk/data'
 
 
 class TestEnoughLines:

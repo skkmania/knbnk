@@ -3,8 +3,8 @@ import classes.knutil as ku
 import classes.knkoma as kk
 import pytest
 
-HOME_DIR = '/home/skkmania'
-DATA_DIR = HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data'
+HOME_DIR = 'Z:/Users/skkmania'
+DATA_DIR = HOME_DIR + '/knbnk/data'
 img_fname = DATA_DIR + '/twletters.jpg'
 
 

@@ -19,7 +19,8 @@ import os.path
 import json
 
 __all__ = ["KnBook", "KnBookException", "KnBookParamsException"]
-DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data'
+HOME_DIR = 'Z:/Users/skkmania'
+DATA_DIR = HOME_DIR + '/knbnk/data'
 
 
 class KnBookException(Exception):

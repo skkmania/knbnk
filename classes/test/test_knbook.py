@@ -6,7 +6,8 @@
 #import classes.knutil as ku
 import classes.knbook as kb
 
-DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data'
+HOME_DIR = 'Z:/Users/skkmania'
+DATA_DIR = HOME_DIR + '/knbnk/data'
 
 
 class TestBook:
