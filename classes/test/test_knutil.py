@@ -3,8 +3,8 @@ import classes.knutil as ku
 import classes.knkoma as kk
 import pytest
 
-HOME_DIR = 'Z:/Users/skkmania'
-DATA_DIR = HOME_DIR + '/knbnk/data'
+HOME_DIR = 'C:/Users/skkmania'
+DATA_DIR = 'Z:/knbnk/data'
 img_fname = DATA_DIR + '/twletters.jpg'
 
 
@@ -26,8 +26,8 @@ class TestFileName:
 
 
 class TestWriteDataFile:
-    def test_write_data_file(self, kn):
-        kn.write_data_file(DATA_DIR)
+    def test_write_data_file(self, knp):
+        knp.write_data_file(DATA_DIR)
 
 
 class TestTmpDir:

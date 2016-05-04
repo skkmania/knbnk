@@ -7,8 +7,8 @@ import shutil
 from classes.knparam import KnParam
 import classes.knutil as ku
 
-DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data'
-
+HOME_DIR = 'C:/Users/skkmania'
+DATA_DIR = 'Z:/knbnk/data'
 
 Default_Param = {
     "param": {

@@ -2,8 +2,8 @@
 import classes.knparam as kr
 import pytest
 
-HOME_DIR = 'Z:/Users/skkmania'
-DATA_DIR = HOME_DIR + '/knbnk/data'
+HOME_DIR = 'C:/Users/skkmania'
+DATA_DIR = 'Z:/knbnk/data'
 
 
 class TestNew:

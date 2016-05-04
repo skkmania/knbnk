@@ -6,8 +6,8 @@
 #import classes.knutil as ku
 import conftest as cf
 
-HOME_DIR = u"/home/skkmania"
-DATA_DIR = HOME_DIR + u"/mnt2/workspace/pysrc/knbnk/data"
+HOME_DIR = 'Z:/Users/skkmania'
+DATA_DIR = HOME_DIR + '/knbnk/data'
 
 
 class TestGenerateParamDicts:

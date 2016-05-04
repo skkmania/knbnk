@@ -11,7 +11,8 @@ import cv2
 __all__ = ["print_params_files", "check_test_environment", "mkFilename",
            "deblog", "KnUtilException", "KnUtilParamsException"]
 
-DATA_DIR = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data'
+HOME_DIR = 'C:/Users/skkmania'
+DATA_DIR = 'Z:/knbnk/data'
 
 
 class KnUtilException(Exception):
@@ -390,6 +391,8 @@ class ImageManager:
         if flag == "small":
             if 'scale_size' in self.parameters:
                 self.scale_size = self.parameters['scale_size']
+                if isinstance(self.scale_size, list):
+                    self.scale_size = self.scale_size[0]
                 self.scale = self.scale_size / self.width
             else:
                 raise 'scale_size must be in param file'

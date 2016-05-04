@@ -9,7 +9,10 @@ import knutil as ku
 import knbook as kb
 from datetime import datetime
 #import knkoma as kk
-__all__ = ["KnParam", "KnParamException", "KnParamParamsException"]
+__all__ = ["KnParam", "KnParamException", "KnParamParamsException", "HOME_DIR", "DATA_DIR"]
+
+HOME_DIR = 'C:/Users/skkmania'
+DATA_DIR = 'Z:/knbnk/data'
 
 # param_fname file :  parameterをjson形式であらわしたテキストファイル
 # param_fname file の書式 :  json text

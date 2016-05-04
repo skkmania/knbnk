@@ -6,8 +6,9 @@ from classes.knpage import KnPage
 #from classes.knpage import KnPageParamsException
 import classes.knutil as ku
 
-HOME_DIR = 'Z:/Users/skkmania'
-DATA_DIR = HOME_DIR + '/knbnk/data'
+HOME_DIR = 'C:/Users/skkmania'
+DATA_DIR = 'Z:/knbnk/data'
+
 box01 = (20, 30, 10, 10)
 box02 = (25, 35, 15, 15)
 box03 = (35, 45, 10, 10)
@@ -48,7 +49,7 @@ class TestFileName:
     def test_mkFilename(self, knp):
         kn = KnPage(knp)
         name = ku.mkFilename(kn, '_cont')
-        expect = '/'.join([HOME_DIR + '/mnt2/workspace/pysrc/knbnk/data',
+        expect = '/'.join([DATA_DIR,
                  '1091460/k001/can_50_200/hgh_1_2_100/right/001_0_cont.jpeg'])
         assert name == expect
 

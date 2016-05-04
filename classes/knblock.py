@@ -560,7 +560,7 @@ class KnBlock:
         self.dispose_boxes(debug=True)
 
         if outdir is None:
-            outdir = '/home/skkmania/mnt2/workspace/pysrc/knbnk/data'
+            outdir = kr.DATA_DIR
 
         self.write_self_boxes_data_to_txt_file(outdir)
 
